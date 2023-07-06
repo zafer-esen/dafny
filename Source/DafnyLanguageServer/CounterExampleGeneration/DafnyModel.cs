@@ -380,13 +380,13 @@ namespace Microsoft.Dafny.LanguageServer.CounterExampleGeneration {
         return new UserDefinedType(new Token(), fullName[7..], null);
       }
       switch (fullName) {
-        case "TInt":
+        case "TInt()":
           return Type.Int;
-        case "TBool":
+        case "TBool()":
           return Type.Bool;
-        case "TReal":
+        case "TReal()":
           return Type.Real;
-        case "TChar":
+        case "TChar()":
           return Type.Char;
       }
       if (fBv.AppWithResult(typeElement) != null) {

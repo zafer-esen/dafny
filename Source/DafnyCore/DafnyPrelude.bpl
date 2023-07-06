@@ -14,86 +14,24 @@ axiom $$Language$Dafny;        // coming from a Dafny program.
 // -- Types ------------------------------------------------------
 // ---------------------------------------------------------------
 
-type Ty;
 type Bv0 = int;
+type ClassTag;
 
-const unique TBool : Ty uses {
-  axiom Tag(TBool) == TagBool;
+datatype Ty {
+  TBool(),
+  TChar(),
+  TInt(),
+  TReal(),
+  TORDINAL(),
+  TBitvector(len: int),
+  TSet(elemTy: Ty),
+  TISet(elemTy: Ty),
+  TMultiSet(elemTy: Ty),
+  TSeq(elemTy: Ty),
+  TMap(keyTy: Ty, elemTy: Ty),
+  TIMap(keyTy: Ty, elemTy: Ty),
+  TClass(tag: ClassTag)
 }
-const unique TChar : Ty uses {
-  axiom Tag(TChar) == TagChar;
-}
-const unique TInt  : Ty uses {
-  axiom Tag(TInt) == TagInt;
-}
-const unique TReal : Ty uses {
-  axiom Tag(TReal) == TagReal;
-}
-const unique TORDINAL  : Ty uses {
-  axiom Tag(TORDINAL) == TagORDINAL;
-}
-// See for which axioms we can make use of the trigger to determine the connection.
-function TBitvector(int) : Ty uses {
-  axiom (forall w: int :: { TBitvector(w) } Inv0_TBitvector(TBitvector(w)) == w);
-}
-function TSet(Ty)      : Ty uses {
-  axiom (forall t: Ty :: { TSet(t) } Inv0_TSet(TSet(t)) == t);
-  axiom (forall t: Ty    :: { TSet(t) }      Tag(TSet(t))      == TagSet);
-}
-function TISet(Ty)     : Ty uses {
-  axiom (forall t: Ty :: { TISet(t) } Inv0_TISet(TISet(t)) == t);
-  axiom (forall t: Ty    :: { TISet(t) }     Tag(TISet(t))     == TagISet);
-}
-function TMultiSet(Ty) : Ty uses {
-  axiom (forall t: Ty :: { TMultiSet(t) } Inv0_TMultiSet(TMultiSet(t)) == t);
-  axiom (forall t: Ty    :: { TMultiSet(t) } Tag(TMultiSet(t)) == TagMultiSet);
-}
-function TSeq(Ty)      : Ty uses {
-  axiom (forall t: Ty :: { TSeq(t) } Inv0_TSeq(TSeq(t)) == t);
-  axiom (forall t: Ty    :: { TSeq(t) }      Tag(TSeq(t))      == TagSeq);
-}
-function TMap(Ty, Ty)  : Ty uses {
-  axiom (forall t, u: Ty :: { TMap(t,u) } Inv0_TMap(TMap(t,u)) == t);
-  axiom (forall t, u: Ty :: { TMap(t,u) } Inv1_TMap(TMap(t,u)) == u);
-  axiom (forall t, u: Ty :: { TMap(t,u) }    Tag(TMap(t,u))    == TagMap);
-}
-function TIMap(Ty, Ty) : Ty uses {
-  axiom (forall t, u: Ty :: { TIMap(t,u) } Inv0_TIMap(TIMap(t,u)) == t);
-  axiom (forall t, u: Ty :: { TIMap(t,u) } Inv1_TIMap(TIMap(t,u)) == u);
-  axiom (forall t, u: Ty :: { TIMap(t,u) }   Tag(TIMap(t,u))   == TagIMap);
-}
-
-function Inv0_TBitvector(Ty) : int;
-function Inv0_TSet(Ty) : Ty;
-function Inv0_TISet(Ty) : Ty;
-function Inv0_TSeq(Ty) : Ty;
-function Inv0_TMultiSet(Ty) : Ty;
-function Inv0_TMap(Ty) : Ty;
-function Inv1_TMap(Ty) : Ty;
-function Inv0_TIMap(Ty) : Ty;
-function Inv1_TIMap(Ty) : Ty;
-
-// -- Classes and Datatypes --
-
-// -- Type Tags --
-type TyTag;
-function Tag(Ty) : TyTag;
-
-const unique TagBool     : TyTag;
-const unique TagChar     : TyTag;
-const unique TagInt      : TyTag;
-const unique TagReal     : TyTag;
-const unique TagORDINAL  : TyTag;
-const unique TagSet      : TyTag;
-const unique TagISet     : TyTag;
-const unique TagMultiSet : TyTag;
-const unique TagSeq      : TyTag;
-const unique TagMap      : TyTag;
-const unique TagIMap     : TyTag;
-const unique TagClass    : TyTag;
-
-type TyTagFamily;
-function TagFamily(Ty): TyTagFamily;
 
 // ---------------------------------------------------------------
 // -- Literals ---------------------------------------------------
@@ -177,17 +115,17 @@ function $IsBox<T>(T,Ty): bool;
 function $IsAllocBox<T>(T,Ty,Heap): bool;
 
 axiom (forall bx : Box ::
-    { $IsBox(bx, TInt) }
-    ( $IsBox(bx, TInt) ==> $Box($Unbox(bx) : int) == bx && $Is($Unbox(bx) : int, TInt)));
+    { $IsBox(bx, TInt()) }
+    ( $IsBox(bx, TInt()) ==> $Box($Unbox(bx) : int) == bx && $Is($Unbox(bx) : int, TInt())));
 axiom (forall bx : Box ::
-    { $IsBox(bx, TReal) }
-    ( $IsBox(bx, TReal) ==> $Box($Unbox(bx) : real) == bx && $Is($Unbox(bx) : real, TReal)));
+    { $IsBox(bx, TReal()) }
+    ( $IsBox(bx, TReal()) ==> $Box($Unbox(bx) : real) == bx && $Is($Unbox(bx) : real, TReal())));
 axiom (forall bx : Box ::
-    { $IsBox(bx, TBool) }
-    ( $IsBox(bx, TBool) ==> $Box($Unbox(bx) : bool) == bx && $Is($Unbox(bx) : bool, TBool)));
+    { $IsBox(bx, TBool()) }
+    ( $IsBox(bx, TBool()) ==> $Box($Unbox(bx) : bool) == bx && $Is($Unbox(bx) : bool, TBool())));
 axiom (forall bx : Box ::
-    { $IsBox(bx, TChar) }
-    ( $IsBox(bx, TChar) ==> $Box($Unbox(bx) : char) == bx && $Is($Unbox(bx) : char, TChar)));
+    { $IsBox(bx, TChar()) }
+    ( $IsBox(bx, TChar()) ==> $Box($Unbox(bx) : char) == bx && $Is($Unbox(bx) : char, TChar())));
 
 // Since each bitvector type is a separate type in Boogie, the Box/Unbox axioms for bitvectors are
 // generated programmatically. Except, Bv0 is given here.
@@ -228,11 +166,11 @@ axiom (forall<T> v : T, t : Ty, h : Heap ::
 // Type-argument to $Is is the /representation type/,
 // the second value argument to $Is is the actual type.
 function $Is<T>(T,Ty): bool uses {           // no heap for now
-    axiom(forall v : int  :: { $Is(v,TInt) }  $Is(v,TInt));
-    axiom(forall v : real :: { $Is(v,TReal) } $Is(v,TReal));
-    axiom(forall v : bool :: { $Is(v,TBool) } $Is(v,TBool));
-    axiom(forall v : char :: { $Is(v,TChar) } $Is(v,TChar));
-    axiom(forall v : ORDINAL :: { $Is(v,TORDINAL) } $Is(v,TORDINAL));
+    axiom(forall v : int  :: { $Is(v,TInt()) }  $Is(v,TInt()));
+    axiom(forall v : real :: { $Is(v,TReal()) } $Is(v,TReal()));
+    axiom(forall v : bool :: { $Is(v,TBool()) } $Is(v,TBool()));
+    axiom(forall v : char :: { $Is(v,TChar()) } $Is(v,TChar()));
+    axiom(forall v : ORDINAL :: { $Is(v,TORDINAL()) } $Is(v,TORDINAL()));
     
     // Since every bitvector type is a separate type in Boogie, the $Is/$IsAlloc axioms
     // for bitvectors are generated programatically. Except, TBitvector(0) is given here.
@@ -289,11 +227,11 @@ function $Is<T>(T,Ty): bool uses {           // no heap for now
         $Is(IMap#Items(v), TISet(Tclass._System.Tuple2(t0, t1))));
 }
 function $IsAlloc<T>(T,Ty,Heap): bool uses {
-    axiom(forall h : Heap, v : int  :: { $IsAlloc(v,TInt,h) }  $IsAlloc(v,TInt,h));
-    axiom(forall h : Heap, v : real :: { $IsAlloc(v,TReal,h) } $IsAlloc(v,TReal,h));
-    axiom(forall h : Heap, v : bool :: { $IsAlloc(v,TBool,h) } $IsAlloc(v,TBool,h));
-    axiom(forall h : Heap, v : char :: { $IsAlloc(v,TChar,h) } $IsAlloc(v,TChar,h));
-    axiom(forall h : Heap, v : ORDINAL :: { $IsAlloc(v,TORDINAL,h) } $IsAlloc(v,TORDINAL,h));
+    axiom(forall h : Heap, v : int  :: { $IsAlloc(v,TInt(),h) }  $IsAlloc(v,TInt(),h));
+    axiom(forall h : Heap, v : real :: { $IsAlloc(v,TReal(),h) } $IsAlloc(v,TReal(),h));
+    axiom(forall h : Heap, v : bool :: { $IsAlloc(v,TBool(),h) } $IsAlloc(v,TBool(),h));
+    axiom(forall h : Heap, v : char :: { $IsAlloc(v,TChar(),h) } $IsAlloc(v,TChar(),h));
+    axiom(forall h : Heap, v : ORDINAL :: { $IsAlloc(v,TORDINAL(),h) } $IsAlloc(v,TORDINAL(),h));
     
     axiom (forall v: Bv0, h: Heap :: { $IsAlloc(v, TBitvector(0), h) } $IsAlloc(v, TBitvector(0), h));
     
@@ -1011,7 +949,7 @@ axiom (forall ty: Ty, heap: Heap, len: int, init: HandleType ::
 axiom (forall ty: Ty, heap: Heap, len: int, init: HandleType, i: int ::
   { Seq#Index(Seq#Create(ty, heap, len, init), i) }
   $IsGoodHeap(heap) && 0 <= i && i < len ==>
-  Seq#Index(Seq#Create(ty, heap, len, init), i) == Apply1(TInt, ty, heap, init, $Box(i)));
+  Seq#Index(Seq#Create(ty, heap, len, init), i) == Apply1(TInt(), ty, heap, init, $Box(i)));
 
 function Seq#Append<T>(Seq T, Seq T): Seq T;
 axiom (forall<T> s0: Seq T, s1: Seq T :: { Seq#Length(Seq#Append(s0,s1)) }
