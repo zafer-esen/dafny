@@ -238,8 +238,8 @@ NoGhost - disable printing of functions, ghost methods, and proof
       Input = inputReader;
       ErrorWriter = errorWriter;
       ErrorTrace = 0;
-      Prune = true;
-      TypeEncodingMethod = Bpl.CoreOptions.TypeEncoding.Predicates;
+      Prune = false;
+      TypeEncodingMethod = Bpl.CoreOptions.TypeEncoding.Monomorphic;
       NormalizeNames = true;
       EmitDebugInformation = false;
       Backend = new CsharpBackend(this);
