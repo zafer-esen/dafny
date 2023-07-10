@@ -204,6 +204,16 @@ namespace Microsoft.Dafny {
 
     internal static class PredefDatatypes { // TODO: review
       
+      // returns accessor with name for ctor if it exists in dt, otherwise null
+      private Bpl.DatatypeAccessor getAccessor(Bpl.DatatypeTypeCtorDecl dt, 
+        String name,
+        Bpl.DatatypeConstructor ctor) {
+        var accessors = dt.GetAccessors(name);
+        return accessors == null || ctor == null ? null :
+          accessors.FirstOrDefault(accessor =>
+            accessor.ConstructorIndex == ctor.index);
+      }
+      
       // Extracts the Ty datatype constructors and accessors from DafnyPrelude.
       public class TyDatatype {
         public readonly Bpl.DatatypeConstructor TBoolCtor;
@@ -264,15 +274,6 @@ namespace Microsoft.Dafny {
           Contract.Invariant(TClassTag != null);
         }
 
-        // returns accessor with name for ctor if it exists in dt, otherwise null
-        private Bpl.DatatypeAccessor getAccessor(Bpl.DatatypeTypeCtorDecl dt, 
-                                                 String name,
-                                                 Bpl.DatatypeConstructor ctor) {
-          var accessors = dt.GetAccessors(name);
-          return accessors == null || TBitvectorCtor == null ? null :
-            accessors.FirstOrDefault(accessor =>
-              accessor.ConstructorIndex == ctor.index);
-        }
         public TyDatatype(Bpl.DatatypeTypeCtorDecl tyDt) {
           TBoolCtor = tyDt.GetConstructor("TBool");
           TCharCtor = tyDt.GetConstructor("TChar");
