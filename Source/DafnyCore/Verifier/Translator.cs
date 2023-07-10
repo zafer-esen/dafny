@@ -205,7 +205,7 @@ namespace Microsoft.Dafny {
     internal static class PredefDatatypes { // TODO: review
       
       // returns accessor with name for ctor if it exists in dt, otherwise null
-      private Bpl.DatatypeAccessor getAccessor(Bpl.DatatypeTypeCtorDecl dt, 
+      private static Bpl.DatatypeAccessor GetAccessor(Bpl.DatatypeTypeCtorDecl dt, 
         String name,
         Bpl.DatatypeConstructor ctor) {
         var accessors = dt.GetAccessors(name);
@@ -282,30 +282,30 @@ namespace Microsoft.Dafny {
           TORDINALCtor = tyDt.GetConstructor("TORDINAL");
 
           TBitvectorCtor = tyDt.GetConstructor("TBitvector");
-          TBitvectorLen = getAccessor(tyDt, "len", TBitvectorCtor);
+          TBitvectorLen = GetAccessor(tyDt, "len", TBitvectorCtor);
           
           TSetCtor = tyDt.GetConstructor("TSet");
-          TSetElemTy = getAccessor(tyDt, "elemTy", TSetCtor);
+          TSetElemTy = GetAccessor(tyDt, "elemTy", TSetCtor);
           
           TISetCtor = tyDt.GetConstructor("TISet");
-          TISetElemTy = getAccessor(tyDt, "elemTy", TISetCtor);
+          TISetElemTy = GetAccessor(tyDt, "elemTy", TISetCtor);
 
           TMultiSetCtor = tyDt.GetConstructor("TMultiSet");
-          TMultiSetElemTy = getAccessor(tyDt, "elemTy", TMultiSetCtor);
+          TMultiSetElemTy = GetAccessor(tyDt, "elemTy", TMultiSetCtor);
 
           TSeqCtor = tyDt.GetConstructor("TSeq");
-          TSeqElemTy = getAccessor(tyDt, "elemTy", TSeqCtor);
+          TSeqElemTy = GetAccessor(tyDt, "elemTy", TSeqCtor);
           
           TMapCtor = tyDt.GetConstructor("TMap");
-          TMapKeyTy = getAccessor(tyDt, "keyTy", TMapCtor);
-          TMapElemTy = getAccessor(tyDt, "elemTy", TMapCtor);
+          TMapKeyTy = GetAccessor(tyDt, "keyTy", TMapCtor);
+          TMapElemTy = GetAccessor(tyDt, "elemTy", TMapCtor);
 
           TIMapCtor = tyDt.GetConstructor("TIMap");
-          TIMapKeyTy = getAccessor(tyDt, "keyTy", TIMapCtor);
-          TIMapElemTy = getAccessor(tyDt, "elemTy", TIMapCtor);
+          TIMapKeyTy = GetAccessor(tyDt, "keyTy", TIMapCtor);
+          TIMapElemTy = GetAccessor(tyDt, "elemTy", TIMapCtor);
 
           TClassCtor = tyDt.GetConstructor("TClass");
-          TClassTag = getAccessor(tyDt, "tag", TClassCtor);
+          TClassTag = GetAccessor(tyDt, "tag", TClassCtor);
         }
         // TODO: print error messages for missing ctors / accessors?
       }
