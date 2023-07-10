@@ -522,7 +522,7 @@ namespace Microsoft.Dafny {
                 Bpl.Expr.Lt(ie, FunctionCall(arg.tok, BuiltinFunction.SeqLength, null, args[i])));
               var seqIndex = FunctionCall(arg.tok, BuiltinFunction.SeqIndex, predef.DatatypeType, args[i], ie);
               Bpl.Expr lhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null,
-                FunctionCall(arg.tok, BuiltinFunction.Unbox, predef.DatatypeType, seqIndex));
+                FunctionCall(arg.tok, null, predef.DatatypeType, seqIndex)); // todo: fix first null BuiltinFunction.Unbox
               var ct = FunctionCall(ctor.tok, ctor.FullName, predef.DatatypeType, args);
               var rhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null, ct);
               q = new Bpl.ForallExpr(ctor.tok, bvs, new Trigger(lhs.tok, true, new List<Bpl.Expr> { seqIndex, ct }),
@@ -548,7 +548,7 @@ namespace Microsoft.Dafny {
             Bpl.Variable dVar = new Bpl.BoundVariable(arg.tok, new Bpl.TypedIdent(arg.tok, "d", predef.DatatypeType));
             bvs.Add(dVar);
             Bpl.IdentifierExpr ie = new Bpl.IdentifierExpr(arg.tok, dVar);
-            Bpl.Expr inSet = Bpl.Expr.SelectTok(arg.tok, args[i], FunctionCall(arg.tok, BuiltinFunction.Box, null, ie));
+            Bpl.Expr inSet = Bpl.Expr.SelectTok(arg.tok, args[i], FunctionCall(arg.tok, null, null, ie)); // todo: fix first null BuiltinFunction.Box
             Bpl.Expr lhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null, ie);
             var ct = FunctionCall(ctor.tok, ctor.FullName, predef.DatatypeType, args);
             var rhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null, ct);
@@ -563,7 +563,7 @@ namespace Microsoft.Dafny {
             Bpl.Variable dVar = new Bpl.BoundVariable(arg.tok, new Bpl.TypedIdent(arg.tok, "d", predef.DatatypeType));
             bvs.Add(dVar);
             Bpl.IdentifierExpr ie = new Bpl.IdentifierExpr(arg.tok, dVar);
-            var inMultiset = Bpl.Expr.SelectTok(arg.tok, args[i], FunctionCall(arg.tok, BuiltinFunction.Box, null, ie));
+            var inMultiset = Bpl.Expr.SelectTok(arg.tok, args[i], FunctionCall(arg.tok, null, null, ie));  // todo: fix first null BuiltinFunction.Box
             Bpl.Expr ante = Bpl.Expr.Gt(inMultiset, Bpl.Expr.Literal(0));
             Bpl.Expr lhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null, ie);
             var ct = FunctionCall(ctor.tok, ctor.FullName, predef.DatatypeType, args);
@@ -582,9 +582,9 @@ namespace Microsoft.Dafny {
               bvs.Add(dVar);
               var ie = new Bpl.IdentifierExpr(arg.tok, dVar);
               var f = finite ? BuiltinFunction.MapDomain : BuiltinFunction.IMapDomain;
-              var domain = FunctionCall(arg.tok, f, predef.MapType(arg.tok, finite, predef.BoxType, predef.BoxType),
+              var domain = FunctionCall(arg.tok, f, predef.MapType(arg.tok, finite, predef.ValueType, predef.ValueType),
                 args[i]);
-              var inDomain = Bpl.Expr.SelectTok(arg.tok, domain, FunctionCall(arg.tok, BuiltinFunction.Box, null, ie));
+              var inDomain = Bpl.Expr.SelectTok(arg.tok, domain, FunctionCall(arg.tok, null, null, ie));  // todo: fix first null BuiltinFunction.Box
               var lhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null, ie);
               var ct = FunctionCall(ctor.tok, ctor.FullName, predef.DatatypeType, args);
               var rhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null, ct);
@@ -597,18 +597,18 @@ namespace Microsoft.Dafny {
               //   { Map#Elements(arg)[bx], #dt.ctor(params) }
               //   Map#Domain(arg)[bx] ==> DtRank($Unbox(Map#Elements(arg)[bx]): DatatypeType) < DtRank(#dt.ctor(params)));
               CreateBoundVariables(ctor.Formals, out bvs, out args);
-              var bxVar = new Bpl.BoundVariable(arg.tok, new Bpl.TypedIdent(arg.tok, "bx", predef.BoxType));
+              var bxVar = new Bpl.BoundVariable(arg.tok, new Bpl.TypedIdent(arg.tok, "bx", predef.ValueType));
               bvs.Add(bxVar);
               var ie = new Bpl.IdentifierExpr(arg.tok, bxVar);
               var f = finite ? BuiltinFunction.MapDomain : BuiltinFunction.IMapDomain;
-              var domain = FunctionCall(arg.tok, f, predef.MapType(arg.tok, finite, predef.BoxType, predef.BoxType),
+              var domain = FunctionCall(arg.tok, f, predef.MapType(arg.tok, finite, predef.ValueType, predef.ValueType),
                 args[i]);
               var inDomain = Bpl.Expr.SelectTok(arg.tok, domain, ie);
               var ef = finite ? BuiltinFunction.MapElements : BuiltinFunction.IMapElements;
-              var element = FunctionCall(arg.tok, ef, predef.MapType(arg.tok, finite, predef.BoxType, predef.BoxType),
+              var element = FunctionCall(arg.tok, ef, predef.MapType(arg.tok, finite, predef.ValueType, predef.ValueType),
                 args[i]);
               var elmt = Bpl.Expr.SelectTok(arg.tok, element, ie);
-              var unboxElmt = FunctionCall(arg.tok, BuiltinFunction.Unbox, predef.DatatypeType, elmt);
+              var unboxElmt = FunctionCall(arg.tok, null, predef.DatatypeType, elmt); // todo: fix first null BuiltinFunction.Unbox
               var lhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null, unboxElmt);
               var ct = FunctionCall(ctor.tok, ctor.FullName, predef.DatatypeType, args);
               var rhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null, ct);

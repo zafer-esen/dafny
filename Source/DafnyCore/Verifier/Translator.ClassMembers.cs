@@ -110,12 +110,12 @@ namespace Microsoft.Dafny {
           name = $"$IsAlloc axiom for {c.WhatKind} {c}";
           var h = BplBoundVar("$h", predef.HeapType, vars);
           // $IsAlloc(o, ..)
-          is_o = MkIsAlloc(o, o_ty, h);
-          body = BplIff(is_o, BplOr(o_null, IsAlloced(c.tok, h, o)));
+          //is_o = MkIsAlloc(o, o_ty, h, o_ty);
+          //body = BplIff(is_o, BplOr(o_null, IsAlloced(c.tok, h, o)));
         } else {
           name = $"$Is axiom for {c.WhatKind} {c}";
           // $Is(o, ..)
-          is_o = MkIs(o, o_ty);
+          //is_o = MkIs(MkValue(o, predef.RefType), o_ty);
           Bpl.Expr rhs;
           if (c == program.SystemModuleManager.ObjectDecl) {
             rhs = Bpl.Expr.True;
@@ -132,11 +132,11 @@ namespace Microsoft.Dafny {
             rhs = BplOr(o_null, DType(o, o_ty));
           }
 
-          body = BplIff(is_o, rhs);
+          //body = BplIff(is_o, rhs);
         }
 
-        var axiom = new Boogie.Axiom(c.tok, BplForall(vars, BplTrigger(is_o), body), name);
-        AddOtherDefinition(GetOrCreateTypeConstructor(c), axiom);
+        //var axiom = new Boogie.Axiom(c.tok, BplForall(vars, BplTrigger(is_o), body), name);
+        //AddOtherDefinition(GetOrCreateTypeConstructor(c), axiom);
       });
     }
 
@@ -282,7 +282,7 @@ namespace Microsoft.Dafny {
       Bpl.Expr isalloc_o;
       if (c is (not ClassLikeDecl) or TraitDecl { IsReferenceTypeDecl: false }) {
         var udt = UserDefinedType.FromTopLevelDecl(c.tok, c);
-        isalloc_o = MkIsAlloc(o, udt, h);
+        //isalloc_o = MkIsAlloc(o, udt, h);
       } else if (RevealedInScope(c)) {
         isalloc_o = IsAlloced(c.tok, h, o);
       } else {
@@ -290,7 +290,7 @@ namespace Microsoft.Dafny {
         var cl = (ClassDecl)c;
         Contract.Assert(cl.NonNullTypeDecl != null);
         var udt = UserDefinedType.FromTopLevelDecl(c.tok, cl.NonNullTypeDecl);
-        isalloc_o = MkIsAlloc(o, udt, h);
+        //isalloc_o = MkIsAlloc(o, udt, h);
       }
 
       Bpl.Expr indexBounds = Bpl.Expr.True;
@@ -347,10 +347,10 @@ namespace Microsoft.Dafny {
         // Note: for the allocation axiom, isGoodHeap is added back in for !f.IsMutable below
       }
 
-      Bpl.Expr is_o = BplAnd(
-        ReceiverNotNull(o),
-        !o.Type.Equals(predef.RefType) || c is TraitDecl ? MkIs(o, UserDefinedType.FromTopLevelDecl(c.tok, c)) : DType(o, o_ty)); // $Is(o, ..)  or  dtype(o) == o_ty
-      ante = BplAnd(ante, is_o);
+      // Bpl.Expr is_o = BplAnd(
+      //   ReceiverNotNull(o),
+      //   !o.Type.Equals(predef.RefType) || c is TraitDecl ? MkIs(o, UserDefinedType.FromTopLevelDecl(c.tok, c)) : DType(o, o_ty)); // $Is(o, ..)  or  dtype(o) == o_ty
+      // ante = BplAnd(ante, is_o);
 
       ante = BplAnd(ante, indexBounds);
 
@@ -366,41 +366,41 @@ namespace Microsoft.Dafny {
       // Now for the conclusion of the axioms
       Bpl.Expr is_hf, isalloc_hf = null;
       if (is_array) {
-        is_hf = MkIs(oDotF, tyexprs[0], true);
-        isalloc_hf = MkIsAlloc(oDotF, tyexprs[0], h, true);
+        //is_hf = MkIs(oDotF, tyexprs[0], true);
+        //isalloc_hf = MkIsAlloc(oDotF, tyexprs[0], h, true);
       } else {
-        is_hf = MkIs(oDotF, f.Type); // $Is(h[o, f], ..)
-        isalloc_hf = MkIsAlloc(oDotF, f.Type, h); // $IsAlloc(h[o, f], ..)
+        //is_hf = MkIs(oDotF, f.Type); // $Is(h[o, f], ..)
+        //isalloc_hf = MkIsAlloc(oDotF, f.Type, h); // $IsAlloc(h[o, f], ..)
       }
 
-      Bpl.Expr ax = BplForall(bvsTypeAxiom, tr, BplImp(ante, is_hf));
-      AddOtherDefinition(fieldDeclaration, new Bpl.Axiom(c.tok, BplImp(heightAntecedent, ax), string.Format("{0}.{1}: Type axiom", c, f)));
+      //Bpl.Expr ax = BplForall(bvsTypeAxiom, tr, BplImp(ante, is_hf));
+      //AddOtherDefinition(fieldDeclaration, new Bpl.Axiom(c.tok, BplImp(heightAntecedent, ax), string.Format("{0}.{1}: Type axiom", c, f)));
 
-      if (isalloc_hf != null) {
-        if (!is_array && !f.IsMutable) {
-          // isGoodHeap wasn't added above, so add it now
-          ante = BplAnd(isGoodHeap, ante);
-        }
-
-        ante = BplAnd(ante, isalloc_o);
-
-        // compute a different trigger
-        t_es = new List<Bpl.Expr>();
-        t_es.Add(oDotF);
-        if (!is_array && !f.IsMutable) {
-          // since "h" is not part of oDotF, we add a separate term that mentions "h"
-          t_es.Add(isalloc_o);
-        }
-
-        if (!(f is ConstantField) && tyvars.Count > 0) {
-          t_es.Add(o_ty);
-        }
-
-        tr = new Bpl.Trigger(c.tok, true, t_es);
-
-        ax = BplForall(bvsAllocationAxiom, tr, BplImp(ante, isalloc_hf));
-        AddOtherDefinition(fieldDeclaration, new Boogie.Axiom(c.tok, BplImp(heightAntecedent, ax), $"{c}.{f}: Allocation axiom"));
-      }
+      // if (isalloc_hf != null) {
+      //   if (!is_array && !f.IsMutable) {
+      //     // isGoodHeap wasn't added above, so add it now
+      //     ante = BplAnd(isGoodHeap, ante);
+      //   }
+      //
+      //   ante = BplAnd(ante, isalloc_o);
+      //
+      //   // compute a different trigger
+      //   t_es = new List<Bpl.Expr>();
+      //   t_es.Add(oDotF);
+      //   if (!is_array && !f.IsMutable) {
+      //     // since "h" is not part of oDotF, we add a separate term that mentions "h"
+      //     t_es.Add(isalloc_o);
+      //   }
+      //
+      //   if (!(f is ConstantField) && tyvars.Count > 0) {
+      //     t_es.Add(o_ty);
+      //   }
+      //
+      //   tr = new Bpl.Trigger(c.tok, true, t_es);
+      //
+      //   ax = BplForall(bvsAllocationAxiom, tr, BplImp(ante, isalloc_hf));
+      //   AddOtherDefinition(fieldDeclaration, new Boogie.Axiom(c.tok, BplImp(heightAntecedent, ax), $"{c}.{f}: Allocation axiom"));
+      // }
     }
 
     /// <summary>
@@ -442,19 +442,19 @@ namespace Microsoft.Dafny {
       bvsAllocationAxiom.AddRange(tyvars);
 
       var oDotF = new Boogie.NAryExpr(c.tok, new Boogie.FunctionCall(GetReadonlyField(f)), tyexprs);
-      var is_hf = MkIs(oDotF, f.Type); // $Is(h[o, f], ..)
-      Boogie.Expr ax = bvsTypeAxiom.Count == 0 ? is_hf : BplForall(bvsTypeAxiom, BplTrigger(oDotF), is_hf);
-      var isAxiom = new Boogie.Axiom(c.tok, BplImp(heightAntecedent, ax), $"{c}.{f}: Type axiom");
-      AddOtherDefinition(fieldDeclaration, isAxiom);
+      //var is_hf = MkIs(oDotF, f.Type); // $Is(h[o, f], ..)
+      //Boogie.Expr ax = bvsTypeAxiom.Count == 0 ? is_hf : BplForall(bvsTypeAxiom, BplTrigger(oDotF), is_hf);
+      //var isAxiom = new Boogie.Axiom(c.tok, BplImp(heightAntecedent, ax), $"{c}.{f}: Type axiom");
+      //AddOtherDefinition(fieldDeclaration, isAxiom);
 
       {
         var hVar = BplBoundVar("$h", predef.HeapType, out var h);
         bvsAllocationAxiom.Add(hVar);
         var isGoodHeap = FunctionCall(c.tok, BuiltinFunction.IsGoodHeap, null, h);
-        var isalloc_hf = MkIsAlloc(oDotF, f.Type, h); // $IsAlloc(h[o, f], ..)
-        ax = BplForall(bvsAllocationAxiom, BplTrigger(isalloc_hf), BplImp(isGoodHeap, isalloc_hf));
-        var isAllocAxiom = new Boogie.Axiom(c.tok, BplImp(heightAntecedent, ax), $"{c}.{f}: Allocation axiom");
-        sink.AddTopLevelDeclaration(isAllocAxiom);
+        //var isalloc_hf = MkIsAlloc(oDotF, f.Type, h); // $IsAlloc(h[o, f], ..)
+        //ax = BplForall(bvsAllocationAxiom, BplTrigger(isalloc_hf), BplImp(isGoodHeap, isalloc_hf));
+        //var isAllocAxiom = new Boogie.Axiom(c.tok, BplImp(heightAntecedent, ax), $"{c}.{f}: Allocation axiom");
+        //sink.AddTopLevelDeclaration(isAllocAxiom);
       }
     }
 
@@ -1107,7 +1107,7 @@ namespace Microsoft.Dafny {
         var bv = new Boogie.BoundVariable(p.tok, new Boogie.TypedIdent(p.tok, p.AssignUniqueName(currentDeclaration.IdGenerator), TrType(pType)));
         forallFormals.Add(bv);
         var jfArg = new Boogie.IdentifierExpr(p.tok, bv);
-        argsJF.Add(ModeledAsBoxType(p.Type) ? BoxIfUnboxed(jfArg, pType) : jfArg);
+        //argsJF.Add(ModeledAsValueType(p.Type) ? BoxIfUnboxed(jfArg, pType) : jfArg);
         moreArgsCF.Add(new Boogie.IdentifierExpr(p.tok, bv));
       }
 
@@ -1156,7 +1156,7 @@ namespace Microsoft.Dafny {
       // The equality that is what it's all about
       var synonyms = Boogie.Expr.Eq(
         funcAppl,
-        ModeledAsBoxType(f.ResultType) ? BoxIfUnboxed(overridingFuncAppl, overridingFunction.ResultType) : overridingFuncAppl);
+        BoxIfUnboxed(overridingFuncAppl, overridingFunction.ResultType));
 
       // The axiom
       Boogie.Expr ax = BplForall(f.tok, new List<Boogie.TypeVariable>(), forallFormals, null, tr,

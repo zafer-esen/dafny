@@ -1,6 +1,7 @@
 #define TI_DEBUG_PRINT
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Threading;
@@ -697,10 +698,28 @@ public abstract class Type : TokenNode {
       return t != null && !t.Finite;
     }
   }
+  public bool IsSetType { // TODO: review
+    get {
+      var t = NormalizeExpand() as SetType;
+      return t != null && t.Finite;
+    }
+  }
   public bool IsISetType {
     get {
       var t = NormalizeExpand() as SetType;
       return t != null && !t.Finite;
+    }
+  }
+  public bool IsMultiSetType { // TODO: review
+    get {
+      var t = NormalizeExpand() as MultiSetType;
+      return t != null;
+    }
+  }
+  public bool IsSeqType { // TODO: review
+    get {
+      var t = NormalizeExpand() as SeqType;
+      return t != null;
     }
   }
   public NewtypeDecl AsNewtype {
