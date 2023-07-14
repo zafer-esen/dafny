@@ -1912,11 +1912,11 @@ namespace Microsoft.Dafny {
       } else {
         for (int i = 0; i < Lhss.Count; i++) {
           var bLhs = Lhss[i];
-          if (ModeledAsValueType(callee.Outs[i].Type) && !ModeledAsValueType(LhsTypes[i])) {
+          if (ModeledAsBoxType(callee.Outs[i].Type) && !ModeledAsBoxType(LhsTypes[i])) {
             // we need an Unbox
-            Bpl.LocalVariable var = new Bpl.LocalVariable(bLhs.tok, new Bpl.TypedIdent(bLhs.tok, CurrentIdGenerator.FreshId("$tmp##"), predef.ValueType));
+            Bpl.LocalVariable var = new Bpl.LocalVariable(bLhs.tok, new Bpl.TypedIdent(bLhs.tok, CurrentIdGenerator.FreshId("$tmp##"), predef.BoxType));
             locals.Add(var);
-            Bpl.IdentifierExpr varIdE = new Bpl.IdentifierExpr(bLhs.tok, var.Name, predef.ValueType);
+            Bpl.IdentifierExpr varIdE = new Bpl.IdentifierExpr(bLhs.tok, var.Name, predef.BoxType);
             tmpOuts.Add(varIdE);
             outs.Add(varIdE);
           } else {
@@ -1955,7 +1955,7 @@ namespace Microsoft.Dafny {
           // the out-parameter.
           Bpl.Cmd cmd = new Bpl.HavocCmd(bLhs.tok, new List<Bpl.IdentifierExpr> { bLhs });
           builder.Add(cmd);
-          cmd = TrAssumeCmd(bLhs.tok, Bpl.Expr.Eq(bLhs, FunctionCall(bLhs.tok, null, TrType(LhsTypes[i]), tmpVarIdE))); // todo: fix first null BuiltinFunction.Unbox
+          cmd = TrAssumeCmd(bLhs.tok, Bpl.Expr.Eq(bLhs, FunctionCall(bLhs.tok, BuiltinFunction.Unbox, TrType(LhsTypes[i]), tmpVarIdE)));
           builder.Add(cmd);
         }
       }
@@ -2110,7 +2110,7 @@ namespace Microsoft.Dafny {
       Contract.Requires(locals != null);
       Contract.Requires(etran != null);
       // Add all newly allocated objects to the set this._new
-      var updatedSet = new Bpl.LocalVariable(iter.tok, new Bpl.TypedIdent(iter.tok, CurrentIdGenerator.FreshId("$iter_newUpdate"), predef.SetType(iter.tok, true, predef.ValueType)));
+      var updatedSet = new Bpl.LocalVariable(iter.tok, new Bpl.TypedIdent(iter.tok, CurrentIdGenerator.FreshId("$iter_newUpdate"), predef.SetType(iter.tok, true, predef.BoxType)));
       locals.Add(updatedSet);
       var updatedSetIE = new Bpl.IdentifierExpr(iter.tok, updatedSet);
       // call $iter_newUpdate := $IterCollectNewObjects(initHeap, $Heap, this, _new);

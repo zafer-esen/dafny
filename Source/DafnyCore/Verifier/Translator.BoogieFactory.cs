@@ -46,17 +46,17 @@ namespace Microsoft.Dafny {
     }
 
     enum BuiltinFunction {
-    //  Lit,
-    //  LitInt,
-    //  LitReal,
+      Lit,
+      LitInt,
+      LitReal,
       LayerSucc,
       AsFuelBottom,
       CharFromInt,
       CharToInt,
       IsChar,
 
-      Is, //IsBox,
-      IsAlloc, //IsAllocBox,
+      Is, IsBox,
+      IsAlloc, IsAllocBox,
 
       IsTraitParent,
 
@@ -124,8 +124,8 @@ namespace Microsoft.Dafny {
       IndexField,
       MultiIndexField,
 
-      //Box,
-      //Unbox,
+      Box,
+      Unbox,
 
       RealToInt,
       IntToReal,
@@ -157,14 +157,13 @@ namespace Microsoft.Dafny {
       // To avoid Boogie's int_2_U and U_2_int conversions, which seem to cause problems with
       // arithmetic reasoning, we use several Lit functions.  In particular, we use one for
       // integers, one for reals, and one for everything else.
-      // if (typ.IsInt) {
-      //   return FunctionCall(expr.tok, BuiltinFunction.LitInt, null, expr);
-      // } else if (typ.IsReal) {
-      //   return FunctionCall(expr.tok, BuiltinFunction.LitReal, null, expr);
-      // } else {
-      //   return FunctionCall(expr.tok, BuiltinFunction.Lit, typ, expr);
-      // }
-      return expr; // todo: fix!
+      if (typ.IsInt) {
+        return FunctionCall(expr.tok, BuiltinFunction.LitInt, null, expr);
+      } else if (typ.IsReal) {
+        return FunctionCall(expr.tok, BuiltinFunction.LitReal, null, expr);
+      } else {
+        return FunctionCall(expr.tok, BuiltinFunction.Lit, typ, expr);
+      }
     }
 
     Bpl.Expr Lit(Bpl.Expr expr) {
@@ -219,18 +218,18 @@ namespace Microsoft.Dafny {
       Contract.Ensures(Contract.Result<Bpl.NAryExpr>() != null);
 
       switch (f) {
-        // case BuiltinFunction.LitInt:
-        //   Contract.Assert(args.Length == 1);
-        //   Contract.Assert(typeInstantiation == null);
-        //   return FunctionCall(tok, "LitInt", Bpl.Type.Int, args);
-        // case BuiltinFunction.LitReal:
-        //   Contract.Assert(args.Length == 1);
-        //   Contract.Assert(typeInstantiation == null);
-        //   return FunctionCall(tok, "LitReal", Bpl.Type.Real, args);
-        // case BuiltinFunction.Lit:
-        //   Contract.Assert(args.Length == 1);
-        //   Contract.Assert(typeInstantiation != null);
-        //   return FunctionCall(tok, "Lit", typeInstantiation, args);
+        case BuiltinFunction.LitInt:
+          Contract.Assert(args.Length == 1);
+          Contract.Assert(typeInstantiation == null);
+          return FunctionCall(tok, "LitInt", Bpl.Type.Int, args);
+        case BuiltinFunction.LitReal:
+          Contract.Assert(args.Length == 1);
+          Contract.Assert(typeInstantiation == null);
+          return FunctionCall(tok, "LitReal", Bpl.Type.Real, args);
+        case BuiltinFunction.Lit:
+          Contract.Assert(args.Length == 1);
+          Contract.Assert(typeInstantiation != null);
+          return FunctionCall(tok, "Lit", typeInstantiation, args);
         case BuiltinFunction.LayerSucc:
           Contract.Assert(args.Length == 1);
           Contract.Assert(typeInstantiation == null);
@@ -256,18 +255,18 @@ namespace Microsoft.Dafny {
           Contract.Assert(args.Length == 2);
           Contract.Assert(typeInstantiation == null);
           return FunctionCall(tok, "$Is", Bpl.Type.Bool, args);
-        // case BuiltinFunction.IsBox:
-        //   Contract.Assert(args.Length == 2);
-        //   Contract.Assert(typeInstantiation == null);
-        //   return FunctionCall(tok, "$IsBox", Bpl.Type.Bool, args);
+        case BuiltinFunction.IsBox:
+          Contract.Assert(args.Length == 2);
+          Contract.Assert(typeInstantiation == null);
+          return FunctionCall(tok, "$IsBox", Bpl.Type.Bool, args);
         case BuiltinFunction.IsAlloc:
           Contract.Assert(args.Length == 3);
           Contract.Assert(typeInstantiation == null);
           return FunctionCall(tok, "$IsAlloc", Bpl.Type.Bool, args);
-        // case BuiltinFunction.IsAllocBox:
-        //   Contract.Assert(args.Length == 3);
-        //   Contract.Assert(typeInstantiation == null);
-        //   return FunctionCall(tok, "$IsAllocBox", Bpl.Type.Bool, args);
+        case BuiltinFunction.IsAllocBox:
+          Contract.Assert(args.Length == 3);
+          Contract.Assert(typeInstantiation == null);
+          return FunctionCall(tok, "$IsAllocBox", Bpl.Type.Bool, args);
 
         case BuiltinFunction.IsTraitParent:
           Contract.Assert(args.Length == 2);
@@ -470,7 +469,7 @@ namespace Microsoft.Dafny {
           return FunctionCall(tok, "Map#Elements", typeInstantiation, args);
         case BuiltinFunction.MapGlue:
           Contract.Assert(args.Length == 3);
-          return FunctionCall(tok, "Map#Glue", predef.MapType(tok, true, predef.ValueType, predef.ValueType), args);
+          return FunctionCall(tok, "Map#Glue", predef.MapType(tok, true, predef.BoxType, predef.BoxType), args);
         case BuiltinFunction.MapEqual:
           Contract.Assert(args.Length == 2);
           Contract.Assert(typeInstantiation == null);
@@ -498,7 +497,7 @@ namespace Microsoft.Dafny {
           return FunctionCall(tok, "IMap#Elements", typeInstantiation, args);
         case BuiltinFunction.IMapGlue:
           Contract.Assert(args.Length == 3);
-          return FunctionCall(tok, "IMap#Glue", predef.MapType(tok, false, predef.ValueType, predef.ValueType), args);
+          return FunctionCall(tok, "IMap#Glue", predef.MapType(tok, false, predef.BoxType, predef.BoxType), args);
         case BuiltinFunction.IMapEqual:
           Contract.Assert(args.Length == 2);
           Contract.Assert(typeInstantiation == null);
@@ -507,20 +506,20 @@ namespace Microsoft.Dafny {
         case BuiltinFunction.IndexField:
           Contract.Assert(args.Length == 1);
           Contract.Assert(typeInstantiation == null);
-          return FunctionCall(tok, "IndexField", predef.FieldName(tok, predef.ValueType), args);
+          return FunctionCall(tok, "IndexField", predef.FieldName(tok, predef.BoxType), args);
         case BuiltinFunction.MultiIndexField:
           Contract.Assert(args.Length == 2);
           Contract.Assert(typeInstantiation == null);
-          return FunctionCall(tok, "MultiIndexField", predef.FieldName(tok, predef.ValueType), args);
+          return FunctionCall(tok, "MultiIndexField", predef.FieldName(tok, predef.BoxType), args);
 
-        // case BuiltinFunction.Box:
-        //   Contract.Assert(args.Length == 1);
-        //   Contract.Assert(typeInstantiation == null);
-        //   return FunctionCall(tok, "$Box", predef.ValueType, args);
-        // case BuiltinFunction.Unbox:
-        //   Contract.Assert(args.Length == 1);
-        //   Contract.Assert(typeInstantiation != null);
-        //   return Bpl.Expr.CoerceType(tok, FunctionCall(tok, "$Unbox", typeInstantiation, args), typeInstantiation);
+        case BuiltinFunction.Box:
+          Contract.Assert(args.Length == 1);
+          Contract.Assert(typeInstantiation == null);
+          return FunctionCall(tok, "$Box", predef.BoxType, args);
+        case BuiltinFunction.Unbox:
+          Contract.Assert(args.Length == 1);
+          Contract.Assert(typeInstantiation != null);
+          return Bpl.Expr.CoerceType(tok, FunctionCall(tok, "$Unbox", typeInstantiation, args), typeInstantiation);
 
         case BuiltinFunction.RealToInt:
           Contract.Assume(args.Length == 1);
@@ -584,7 +583,7 @@ namespace Microsoft.Dafny {
         case BuiltinFunction.BoxRank:
           Contract.Assert(args.Length == 1);
           Contract.Assert(typeInstantiation == null);
-          return FunctionCall(tok, "ValueRank", Bpl.Type.Int, args);
+          return FunctionCall(tok, "BoxRank", Bpl.Type.Int, args);
 
         case BuiltinFunction.GenericAlloc:
           Contract.Assert(args.Length == 2);
