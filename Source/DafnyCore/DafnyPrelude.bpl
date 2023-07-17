@@ -143,53 +143,53 @@ function $Unbox<T>(Box): T;
 
 // Corresponding entries for boxes...
 // This could probably be solved by having Box also inhabit Ty
-function $IsBox<T>(T,Ty): bool;
-function $IsAllocBox<T>(T,Ty,Heap): bool;
-
-axiom (forall bx : Box ::
+function $IsBox<T>(T,Ty): bool uses {
+  axiom (forall bx : Box ::
     { $IsBox(bx, TInt()) }
     ( $IsBox(bx, TInt()) ==> bx is BoxInt && $Is(bx->vInt, TInt())));
-axiom (forall bx : Box ::
-    { $Is(bx, TReal()) }
-    ( $Is(bx, TReal()) ==> bx is BoxReal && $Is(bx->vReal, TReal()) ));
-axiom (forall bx : Box ::
-    { $Is(bx, TBool()) }
-    ( $Is(bx, TBool()) ==> bx is BoxBool && $Is(bx->vBool, TBool()) ));
-axiom (forall bx : Box ::
-    { $Is(bx, TChar()) }
-    ( $Is(bx, TChar()) ==> bx is BoxChar && $Is(bx->vChar, TChar()) ));
+  axiom (forall bx : Box ::
+    { $IsBox(bx, TReal()) }
+    ( $IsBox(bx, TReal()) ==> bx is BoxReal && $Is(bx->vReal, TReal()) ));
+  axiom (forall bx : Box ::
+    { $IsBox(bx, TBool()) }
+    ( $IsBox(bx, TBool()) ==> bx is BoxBool && $Is(bx->vBool, TBool()) ));
+  axiom (forall bx : Box ::
+    { $IsBox(bx, TChar()) }
+    ( $IsBox(bx, TChar()) ==> bx is BoxChar && $Is(bx->vChar, TChar()) ));
 
-// Since each bitvector type is a separate type in Boogie, the Box/Unbox axioms for bitvectors are
-// generated programmatically. Except, Bv0 is given here.
-axiom (forall bx : Box ::
+  // Since each bitvector type is a separate type in Boogie, the Box/Unbox axioms for bitvectors are
+  // generated programmatically. Except, Bv0 is given here.
+  axiom (forall bx : Box ::
     { $IsBox(bx, TBitvector(0)) } // TODO: #Box review, assuming bv0 is int
     ( $IsBox(bx, TBitvector(0)) ==> bx is BoxInt && $Is(bx->vInt, TBitvector(0))));
-
-axiom (forall bx : Box, t : Ty ::
+  axiom (forall bx : Box, t : Ty ::
     { $IsBox(bx, TSet(t)) }
     ( $IsBox(bx, TSet(t)) ==> bx is BoxSet && $Is(bx->vSet, TSet(t))));
-axiom (forall bx : Box, t : Ty ::
+  axiom (forall bx : Box, t : Ty ::
     { $IsBox(bx, TISet(t)) }
     ( $IsBox(bx, TISet(t)) ==> bx is BoxISet && $Is(bx->vISet, TISet(t))));
-axiom (forall bx : Box, t : Ty ::
+  axiom (forall bx : Box, t : Ty ::
     { $IsBox(bx, TMultiSet(t)) }
     ( $IsBox(bx, TMultiSet(t)) ==> bx is BoxMultiSet && $Is(bx->vMultiSet, TMultiSet(t))));
-axiom (forall bx : Box, t : Ty ::
+  axiom (forall bx : Box, t : Ty ::
     { $IsBox(bx, TSeq(t)) }
     ( $IsBox(bx, TSeq(t)) ==> bx is BoxSeq && $Is(bx->vSeq, TSeq(t))));
-axiom (forall bx : Box, s : Ty, t : Ty ::
+  axiom (forall bx : Box, s : Ty, t : Ty ::
     { $IsBox(bx, TMap(s, t)) }
     ( $IsBox(bx, TMap(s, t)) ==> bx is BoxMap && $Is(bx->vMap, TMap(s, t))));
-axiom (forall bx : Box, s : Ty, t : Ty ::
+  axiom (forall bx : Box, s : Ty, t : Ty ::
     { $IsBox(bx, TIMap(s, t)) }
     ( $IsBox(bx, TIMap(s, t)) ==> bx is BoxIMap && $Is(bx->vIMap, TIMap(s, t))));
-
 axiom (forall<T> v : T, t : Ty ::
     { $IsBox($Box(v), t) }
     ( $IsBox($Box(v), t) <==> $Is(v,t) ));
-axiom (forall<T> v : T, t : Ty, h : Heap ::
+}
+
+function $IsAllocBox<T>(T,Ty,Heap): bool uses {
+  axiom (forall<T> v : T, t : Ty, h : Heap ::
     { $IsAllocBox($Box(v), t, h) }
     ( $IsAllocBox($Box(v), t, h) <==> $IsAlloc(v,t,h) ));
+}
 
 // ---------------------------------------------------------------
 // -- Is and IsAlloc ---------------------------------------------
@@ -208,20 +208,20 @@ function $Is<T>(T,Ty): bool uses {           // no heap for now
     // for bitvectors are generated programatically. Except, TBitvector(0) is given here.
     axiom (forall v: Bv0 :: { $Is(v, TBitvector(0)) } $Is(v, TBitvector(0)));
 
-    axiom (forall v: Set Box, t0: Ty :: { $Is(v, TSet(t0)) }
+    axiom (forall v: Map Box bool, t0: Ty :: { $Is(v, TSet(t0)) }
       $Is(v, TSet(t0)) <==>
-      (forall bx: Box :: { v[bx] }
-        v[bx] ==> $IsBox(bx, t0)));
-    axiom (forall v: ISet Box, t0: Ty :: { $Is(v, TISet(t0)) }
+      (forall bx: Box :: { Map#Elements(v)[bx] }
+        Map#Elements(v)[bx] ==> $IsBox(bx, t0)));
+    axiom (forall v: IMap Box bool, t0: Ty :: { $Is(v, TISet(t0)) }
       $Is(v, TISet(t0)) <==>
-      (forall bx: Box :: { v[bx] }
-        v[bx] ==> $IsBox(bx, t0)));
-    axiom (forall v: MultiSet Box, t0: Ty :: { $Is(v, TMultiSet(t0)) }
+      (forall bx: Box :: { IMap#Elements(v)[bx] }
+        IMap#Elements(v)[bx] ==> $IsBox(bx, t0)));
+    axiom (forall v: Map Box int, t0: Ty :: { $Is(v, TMultiSet(t0)) }
       $Is(v, TMultiSet(t0)) <==>
-      (forall bx: Box :: { v[bx] }
-        0 < v[bx] ==> $IsBox(bx, t0)));
-    axiom (forall v: MultiSet Box, t0: Ty :: { $Is(v, TMultiSet(t0)) }
-      $Is(v, TMultiSet(t0)) ==> $IsGoodMultiSet(v));
+      (forall bx: Box :: { Map#Elements(v)[bx] }
+        0 < Map#Elements(v)[bx] ==> $IsBox(bx, t0)));
+    axiom (forall v: Map Box int, t0: Ty :: { $Is(v, TMultiSet(t0)) }
+      $Is(v, TMultiSet(t0)) ==> $IsGoodMultiSet(Map#Elements(v)));
     axiom (forall v: Seq Box, t0: Ty :: { $Is(v, TSeq(t0)) }
       $Is(v, TSeq(t0)) <==>
       (forall i : int :: { Seq#Index(v, i) }
@@ -267,18 +267,18 @@ function $IsAlloc<T>(T,Ty,Heap): bool uses {
     
     axiom (forall v: Bv0, h: Heap :: { $IsAlloc(v, TBitvector(0), h) } $IsAlloc(v, TBitvector(0), h));
     
-    axiom (forall v: Set Box, t0: Ty, h: Heap :: { $IsAlloc(v, TSet(t0), h) }
+    axiom (forall v: Map Box bool, t0: Ty, h: Heap :: { $IsAlloc(v, TSet(t0), h) }
       $IsAlloc(v, TSet(t0), h) <==>
-      (forall bx: Box :: { v[bx] }
-        v[bx] ==> $IsAllocBox(bx, t0, h)));
-    axiom (forall v: ISet Box, t0: Ty, h: Heap :: { $IsAlloc(v, TISet(t0), h) }
+      (forall bx: Box :: { Map#Elements(v)[bx] }
+        Map#Elements(v)[bx] ==> $IsAllocBox(bx, t0, h)));
+    axiom (forall v: IMap Box bool, t0: Ty, h: Heap :: { $IsAlloc(v, TISet(t0), h) }
       $IsAlloc(v, TISet(t0), h) <==>
-      (forall bx: Box :: { v[bx] }
-        v[bx] ==> $IsAllocBox(bx, t0, h)));
-    axiom (forall v: MultiSet Box, t0: Ty, h: Heap :: { $IsAlloc(v, TMultiSet(t0), h) }
+      (forall bx: Box :: { IMap#Elements(v)[bx] }
+        IMap#Elements(v)[bx] ==> $IsAllocBox(bx, t0, h)));
+    axiom (forall v: Map Box int, t0: Ty, h: Heap :: { $IsAlloc(v, TMultiSet(t0), h) }
       $IsAlloc(v, TMultiSet(t0), h) <==>
-      (forall bx: Box :: { v[bx] }
-        0 < v[bx] ==> $IsAllocBox(bx, t0, h)));
+      (forall bx: Box :: { Map#Elements(v)[bx] }
+        0 < Map#Elements(v)[bx] ==> $IsAllocBox(bx, t0, h)));
     axiom (forall v: Seq Box, t0: Ty, h: Heap :: { $IsAlloc(v, TSeq(t0), h) }
       $IsAlloc(v, TSeq(t0), h) <==>
       (forall i : int :: { Seq#Index(v, i) }
