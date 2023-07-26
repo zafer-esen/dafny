@@ -46,14 +46,15 @@ namespace Microsoft.Dafny.LanguageServer.Language {
 
         if (engine.Options.PrintFile != null) {
           var moduleCount = Translator.VerifiableModules(program).Count();
-          foreach (var (suffix, boogieProgram) in translated) {
+          foreach (var (suffix, boogieProgram, _) in translated) {
             var fileName = moduleCount > 1 ? DafnyMain.BoogieProgramSuffix(engine.Options.PrintFile, suffix) : engine.Options.PrintFile;
             ExecutionEngine.PrintBplFile(engine.Options, fileName, boogieProgram, false, false, engine.Options.PrettyPrint);
           }
         }
 
         return translated.SelectMany(t => {
-          var (_, boogieProgram) = t;
+          var (_, boogieProgram, _) = t;
+          // TODO: change engine options?
           return engine.GetImplementationTasks(boogieProgram);
         }).ToList();
       }

@@ -66,6 +66,37 @@ public class ModuleDefinition : RangeNode, IDeclarationOrUsage, IAttributeBearin
       : new[] { new Pointer<TopLevelDecl>(() => DefaultClass, v => DefaultClass = (DefaultClassDecl)v) }).
     Concat(SourceDecls.ToPointers()).Concat(ResolvedPrefixNamedModules.ToPointers());
 
+  public Boogie.CoreOptions.TypeEncoding? GetTypeEncodingAttribute {
+    get {
+      if (Attributes.Find(Attributes, Attributes.TypeEncodingAttributeName) is Attributes te 
+          && te.Args.Count == 1 
+          && te.Args[0] is LiteralExpr { Value: string encoding }) {
+        return encoding switch {
+          "p" => Boogie.CoreOptions.TypeEncoding.Predicates,
+          "a" => Boogie.CoreOptions.TypeEncoding.Arguments,
+          "m" => Boogie.CoreOptions.TypeEncoding.Monomorphic,
+          _ => null
+        };
+      }
+      return null;
+    }
+  }
+
+  public bool? GetPruneAttribute {
+    get {
+      if (Attributes.Find(Attributes, Attributes.PruneAttributeName) is Attributes pa 
+          && pa.Args.Count == 1 
+          && pa.Args[0] is LiteralExpr { Value: string prune }) {
+        return prune.ToLower() switch {
+          "on" => true,
+          "off" => false,
+          _ => null
+        };
+      }
+      return null;
+    }
+  }
+  
   protected IEnumerable<TopLevelDecl> DefaultClasses {
     get { return DefaultClass == null ? Enumerable.Empty<TopLevelDecl>() : new TopLevelDecl[] { DefaultClass }; }
   }

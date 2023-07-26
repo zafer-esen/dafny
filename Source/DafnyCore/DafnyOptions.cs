@@ -673,6 +673,37 @@ NoGhost - disable printing of functions, ghost methods, and proof
 
           return true;
 
+        case "prune":
+          if (ps.ConfirmArgumentCount(1)) {
+            if (args[ps.i].ToLower() == "on") {
+              Prune = true;
+            } else if (args[ps.i].ToLower() == "off") {
+              Prune = false;
+            } else {
+              InvalidArgumentError(name, ps);
+            }
+          }
+          return true;
+        
+        case "typeEncoding":
+          if (ps.ConfirmArgumentCount(1)) {
+            switch(args[ps.i].ToLower()) {
+              case "p":
+                TypeEncodingMethod = Bpl.CoreOptions.TypeEncoding.Predicates;
+                break;
+              case "a":
+                TypeEncodingMethod = Bpl.CoreOptions.TypeEncoding.Arguments;
+                break;
+              case "m":
+                TypeEncodingMethod = Bpl.CoreOptions.TypeEncoding.Monomorphic;
+                break;
+              default:
+                InvalidArgumentError(name, ps);
+                break;
+            }
+          }
+          return true;
+        
         case "printTooltips":
           PrintTooltips = true;
           return true;

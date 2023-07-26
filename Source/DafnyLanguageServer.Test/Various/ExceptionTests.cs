@@ -93,12 +93,12 @@ public class ExceptionTests : ClientBasedLanguageServerTest {
     }
 
     public Task<IReadOnlyList<IImplementationTask>> GetVerificationTasksAsync(ExecutionEngine engine,
-      CompilationAfterResolution compilation, CancellationToken cancellationToken) {
+      CompilationAfterResolution compilation, DafnyOptions options, CancellationToken cancellationToken) {
 
       if (tests.CrashOnPrepareVerification) {
         throw new Exception("crash");
       }
-      return verifier.GetVerificationTasksAsync(engine, compilation, cancellationToken);
+      return verifier.GetVerificationTasksAsync(engine, compilation, options, cancellationToken);
     }
   }
 
