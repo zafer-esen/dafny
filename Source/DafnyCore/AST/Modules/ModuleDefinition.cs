@@ -87,15 +87,15 @@ public class ModuleDefinition : RangeNode, IDeclarationOrUsage, IAttributeBearin
       if (Attributes.Find(Attributes, Attributes.PruneAttributeName) is Attributes pa 
           && pa.Args.Count == 1 
           && pa.Args[0] is LiteralExpr { Value: string prune }) {
-        return prune.ToLower() switch {
-          "on" => true,
-          "off" => false,
+        return int.Parse(prune) switch {
+          1 => true,
+          0 => false,
           _ => null
         };
       }
       return null;
     }
-  }
+}
   
   protected IEnumerable<TopLevelDecl> DefaultClasses {
     get { return DefaultClass == null ? Enumerable.Empty<TopLevelDecl>() : new TopLevelDecl[] { DefaultClass }; }

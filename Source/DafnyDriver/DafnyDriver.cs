@@ -445,7 +445,7 @@ namespace Microsoft.Dafny {
 
         var boogieProgramsAndOptions =
           await DafnyMain.LargeStackFactory.StartNew(() => 
-            Translate(engine.Options, dafnyProgram, options).ToList());
+            Translate(engine.Options, dafnyProgram).ToList());
 
         string baseName = cce.NonNull(Path.GetFileName(dafnyFileNames[^1]));
         var (verified, outcome, moduleStats) =
@@ -615,7 +615,7 @@ namespace Microsoft.Dafny {
     }
 
     public static IEnumerable<Tuple<string, Bpl.Program, DafnyOptions>>
-      Translate(ExecutionEngineOptions options, Program dafnyProgram, DafnyOptions commonOptions) {
+      Translate(ExecutionEngineOptions options, Program dafnyProgram) {
       var modulesCount = Translator.VerifiableModules(dafnyProgram).Count();
 
       foreach (var prog in Translator.Translate(dafnyProgram, dafnyProgram.Reporter)) {

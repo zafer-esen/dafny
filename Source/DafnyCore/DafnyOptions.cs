@@ -674,16 +674,16 @@ NoGhost - disable printing of functions, ghost methods, and proof
           return true;
 
         case "prune":
-          if (ps.ConfirmArgumentCount(1)) {
-            if (args[ps.i].ToLower() == "on") {
-              Prune = true;
-            } else if (args[ps.i].ToLower() == "off") {
-              Prune = false;
-            } else {
-              InvalidArgumentError(name, ps);
-            }
+        if (ps.ConfirmArgumentCount(1)) {
+          if (args[ps.i] == "1") {
+            Prune = true;
+          } else if (args[ps.i] == "0") {
+            Prune = false;
+          } else {
+            InvalidArgumentError(name, ps);
           }
-          return true;
+        }
+        return true;
         
         case "typeEncoding":
           if (ps.ConfirmArgumentCount(1)) {
