@@ -289,6 +289,7 @@ NoGhost - disable printing of functions, ghost methods, and proof
     public string DafnyPrelude = null;
     public string DafnyPrintFile = null;
     public bool AllowSourceFolders = false;
+    public bool UseSeqTheory = false;
     public List<string> SourceFolders { get; } = new(); // list of folders, for those commands that permit processing all source files in folders
 
     public enum ContractTestingMode {

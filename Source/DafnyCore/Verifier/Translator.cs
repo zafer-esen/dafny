@@ -239,7 +239,7 @@ namespace Microsoft.Dafny {
       public readonly Bpl.Function Tuple2Destructors0;
       public readonly Bpl.Function Tuple2Destructors1;
       public readonly Bpl.Function Tuple2Constructor;
-      private readonly Bpl.TypeSynonymDecl seqTypeCtor;
+      private readonly Bpl.NamedDeclaration seqTypeCtor;
       public readonly Bpl.Type Bv0Type;
       readonly Bpl.TypeCtorDecl fieldName;
       public readonly Bpl.Type HeapType;
@@ -319,7 +319,13 @@ namespace Microsoft.Dafny {
       public Bpl.Type SeqType(Bpl.IToken tok) {
         Contract.Requires(tok != null);
         Contract.Ensures(Contract.Result<Bpl.Type>() != null);
-        return new Bpl.TypeSynonymAnnotation(Token.NoToken, seqTypeCtor, new List<Bpl.Type> { });
+        if (seqTypeCtor is Bpl.TypeSynonymDecl seqSynonym) {
+          return new Bpl.TypeSynonymAnnotation(Token.NoToken, seqSynonym, new List<Bpl.Type> { });
+        } else if (seqTypeCtor is Bpl.TypeCtorDecl seqCtor) {
+          return new Bpl.CtorType(Token.NoToken, seqCtor, new List<Bpl.Type> { });
+        } else {
+          return null;
+        }
       }
 
       public Bpl.Type FieldName(Bpl.IToken tok, Bpl.Type ty) {
@@ -346,7 +352,7 @@ namespace Microsoft.Dafny {
                              Bpl.Function mapValues, Bpl.Function imapValues, Bpl.Function mapItems, Bpl.Function imapItems,
                              Bpl.Function objectTypeConstructor,
                              Bpl.Function tuple2Destructors0, Bpl.Function tuple2Destructors1, Bpl.Function tuple2Constructor, Bpl.Function tuple2TypeConstructor,
-                             Bpl.TypeSynonymDecl seqTypeCtor, Bpl.TypeSynonymDecl bv0TypeDecl,
+                             Bpl.NamedDeclaration seqTypeCtor, Bpl.TypeSynonymDecl bv0TypeDecl,
                              Bpl.TypeCtorDecl fieldNameType, Bpl.TypeCtorDecl tyType, Bpl.TypeCtorDecl tyTagType, Bpl.TypeCtorDecl tyTagFamilyType,
                              Bpl.GlobalVariable heap, Bpl.TypeCtorDecl classNameType, Bpl.TypeCtorDecl nameFamilyType,
                              Bpl.TypeCtorDecl datatypeType, Bpl.TypeCtorDecl handleType, Bpl.TypeCtorDecl layerType, Bpl.TypeCtorDecl dtCtorId,
@@ -463,7 +469,7 @@ namespace Microsoft.Dafny {
       Bpl.Function tuple2Destructors0 = null;
       Bpl.Function tuple2Destructors1 = null;
       Bpl.Function tuple2Constructor = null;
-      Bpl.TypeSynonymDecl seqTypeCtor = null;
+      Bpl.NamedDeclaration seqTypeCtor = null;
       Bpl.TypeCtorDecl fieldNameType = null;
       Bpl.TypeCtorDecl classNameType = null;
       Bpl.TypeSynonymDecl bv0TypeDecl = null;
@@ -513,6 +519,8 @@ namespace Microsoft.Dafny {
             mapTypeCtor = dt;
           } else if (dt.Name == "IMap") {
             imapTypeCtor = dt;
+          } else if (dt.Name == "Seq") {
+            seqTypeCtor = dt;
           }
         } else if (d is Bpl.TypeSynonymDecl) {
           Bpl.TypeSynonymDecl dt = (Bpl.TypeSynonymDecl)d;
@@ -674,11 +682,27 @@ namespace Microsoft.Dafny {
     }
 
     Bpl.Program ReadPrelude() {
-      string preludePath = options.DafnyPrelude;
-      if (preludePath == null) {
-        //using (System.IO.Stream stream = cce.NonNull( System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("DafnyPrelude.bpl")) // Use this once Spec#/VSIP supports designating a non-.resx project item as an embedded resource
-        string codebase = cce.NonNull(System.IO.Path.GetDirectoryName(cce.NonNull(System.Reflection.Assembly.GetExecutingAssembly().Location)));
-        preludePath = System.IO.Path.Combine(codebase, "DafnyPrelude.bpl");
+      string codebase = cce.NonNull(System.IO.Path.GetDirectoryName(cce.NonNull(System.Reflection.Assembly.GetExecutingAssembly().Location)));
+      var preludePath = System.IO.Path.Combine(codebase, "DafnyPrelude.bpl");
+      string combinedPrelude;
+      if (options.DafnyPrelude == null) {
+        var theoryPreludes = new Dictionary<string, string> {
+          { "Seq", options.UseSeqTheory ? "DafnyPreludeSeqNative.bpl" : "DafnyPreludeSeqAxiom.bpl" },
+          { "Set", "DafnyPreludeSetAxiom.bpl" },
+          { "ISet", "DafnyPreludeISetAxiom.bpl" },
+          { "MultiSet", "DafnyPreludeMultiSetAxiom.bpl" },
+          { "Map", "DafnyPreludeMapAxiom.bpl" },
+          { "IMap", "DafnyPreludeIMapAxiom.bpl" }
+        };
+
+        var selectedFiles = new List<string> { preludePath };
+        selectedFiles.AddRange(theoryPreludes.Values.Select(v => System.IO.Path.Combine(codebase, v)));
+
+        combinedPrelude = selectedFiles
+          .Select(filePath => System.IO.File.ReadAllText(filePath))
+          .Aggregate((file1, file2) => file1 + Environment.NewLine + file2);
+      } else {
+        combinedPrelude = System.IO.File.ReadAllText(preludePath);
       }
 
       var defines = new List<string>();
@@ -699,11 +723,15 @@ namespace Microsoft.Dafny {
       if (options.Get(CommonOptionBag.UnicodeCharacters)) {
         defines.Add("UNICODE_CHAR");
       }
-      int errorCount = BplParser.Parse(preludePath, defines, out var prelude);
-      if (prelude == null || errorCount > 0) {
-        return null;
-      } else {
-        return prelude;
+
+      using (var reader = new StringReader(combinedPrelude))
+      {
+        int errorCount = BplParser.Parse(reader, "DafnyPreludeCombined.bpl", defines, out var prelude, useBaseName: false);
+        if (prelude == null || errorCount > 0) {
+          return null;
+        } else {
+          return prelude;
+        }
       }
     }
 
