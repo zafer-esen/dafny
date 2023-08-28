@@ -1,3 +1,4 @@
+#if !TY_DATATYPE
 function TIMap(Ty, Ty) : Ty;
 axiom (forall t, u: Ty :: { TIMap(t,u) } Inv0_TIMap(TIMap(t,u)) == t);
 axiom (forall t, u: Ty :: { TIMap(t,u) } Inv1_TIMap(TIMap(t,u)) == u);
@@ -7,6 +8,7 @@ function Inv0_TIMap(Ty) : Ty;
 function Inv1_TIMap(Ty) : Ty;
 
 const unique TagIMap     : TyTag;
+#endif
 
 axiom (forall bx : Box, s : Ty, t : Ty ::
     { $IsBox(bx, TIMap(s, t)) }
@@ -26,6 +28,8 @@ axiom (forall v: IMap Box Box, t0: Ty, t1: Ty ::
     $Is(IMap#Domain(v), TISet(t0)) &&
     $Is(IMap#Values(v), TISet(t1)) &&
     $Is(IMap#Items(v), TISet(Tclass._System.Tuple2(t0, t1))));
+
+#if USE_HEAP
 axiom (forall v: IMap Box Box, t0: Ty, t1: Ty, h: Heap ::
   { $IsAlloc(v, TIMap(t0, t1), h) }
   $IsAlloc(v, TIMap(t0, t1), h)
@@ -34,7 +38,7 @@ axiom (forall v: IMap Box Box, t0: Ty, t1: Ty, h: Heap ::
       IMap#Domain(v)[bx] ==>
         $IsAllocBox(IMap#Elements(v)[bx], t1, h) &&
         $IsAllocBox(bx, t0, h)));
-
+#endif
 
 // ---------------------------------------------------------------
 // -- Axiomatization of IMaps ------------------------------------

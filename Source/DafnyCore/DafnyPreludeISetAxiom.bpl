@@ -15,11 +15,12 @@ axiom (forall v: ISet Box, t0: Ty :: { $Is(v, TISet(t0)) }
   (forall bx: Box :: { v[bx] }
     v[bx] ==> $IsBox(bx, t0)));
 
+#if USE_HEAP
 axiom (forall v: ISet Box, t0: Ty, h: Heap :: { $IsAlloc(v, TISet(t0), h) }
   $IsAlloc(v, TISet(t0), h) <==>
   (forall bx: Box :: { v[bx] }
     v[bx] ==> $IsAllocBox(bx, t0, h)));
-
+#endif
 // ---------------------------------------------------------------
 // -- Axiomatization of isets -------------------------------------
 // ---------------------------------------------------------------

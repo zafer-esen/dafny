@@ -56,6 +56,7 @@ axiom (forall v: Seq, t0: Ty :: { $Is(v, TSeq(t0)) }
     0 <= i && i < Seq#Length(v) ==>
     $IsBox(Seq#Index(v, i), t0)));
 
+#if USE_HEAP
 // Specialize $IsAlloc to Seq?
 //function $IsAlloc<T>(T,Ty,Heap): bool;
 axiom (forall v: Seq, t0: Ty, h: Heap :: { $IsAlloc(v, TSeq(t0), h) }
@@ -63,7 +64,7 @@ axiom (forall v: Seq, t0: Ty, h: Heap :: { $IsAlloc(v, TSeq(t0), h) }
   (forall i : int :: { Seq#Index(v, i) }
     0 <= i && i < Seq#Length(v) ==>
 	$IsAllocBox(Seq#Index(v, i), t0, h)));
-
+#endif
 // ---------------------------------------------------------------
 // -- Axiomatization of sequences --------------------------------
 // ---------------------------------------------------------------
@@ -179,6 +180,7 @@ Seq#Drop(s: Seq, howMany: int): Seq {
 axiom (forall s: Seq, bx: Box, t: Ty :: { $Is(Seq#Build(s,bx),TSeq(t)) }
     $Is(s,TSeq(t)) && $IsBox(bx,t) ==> $Is(Seq#Build(s,bx),TSeq(t)));
 
+#if USE_HEAP
 function Seq#Create(ty: Ty, heap: Heap, len: int, init: HandleType): Seq;
 axiom (forall ty: Ty, heap: Heap, len: int, init: HandleType ::
   { Seq#Length(Seq#Create(ty, heap, len, init): Seq) }
@@ -218,6 +220,7 @@ axiom (forall h: Heap, i: int, v: Box, a: ref ::
 axiom (forall h: Heap, a: ref, n0, n1: int ::
         { Seq#Take(Seq#FromArray(h, a), n0), Seq#Take(Seq#FromArray(h, a), n1) }
         n0 + 1 == n1 && 0 <= n0 && n1 <= _System.array.Length(a) ==> Seq#Take(Seq#FromArray(h, a), n1) == Seq#Build(Seq#Take(Seq#FromArray(h, a), n0), read(h, a, IndexField(n0): Field Box)) );
+#endif
 
 function Seq#Rank(Seq): int;
 axiom (forall s: Seq, i: int ::

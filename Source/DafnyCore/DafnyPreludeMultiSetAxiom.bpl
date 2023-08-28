@@ -17,11 +17,12 @@ axiom (forall v: MultiSet Box, t0: Ty :: { $Is(v, TMultiSet(t0)) }
 axiom (forall v: MultiSet Box, t0: Ty :: { $Is(v, TMultiSet(t0)) }
   $Is(v, TMultiSet(t0)) ==> $IsGoodMultiSet(v));
 
+#if USE_HEAP
 axiom (forall v: MultiSet Box, t0: Ty, h: Heap :: { $IsAlloc(v, TMultiSet(t0), h) }
   $IsAlloc(v, TMultiSet(t0), h) <==>
   (forall bx: Box :: { v[bx] }
     0 < v[bx] ==> $IsAllocBox(bx, t0, h)));
-
+#endif
 
 // ---------------------------------------------------------------
 // -- Axiomatization of multisets --------------------------------

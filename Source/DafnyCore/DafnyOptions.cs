@@ -248,7 +248,7 @@ NoGhost - disable printing of functions, ghost methods, and proof
       ErrorWriter = errorWriter;
       ErrorTrace = 0;
       Prune = true;
-      TypeEncodingMethod = Bpl.CoreOptions.TypeEncoding.Arguments;
+      TypeEncodingMethod = Bpl.CoreOptions.TypeEncoding.Monomorphic;
       NormalizeNames = true;
       EmitDebugInformation = false;
       Backend = new CsharpBackend(this);
@@ -290,6 +290,17 @@ NoGhost - disable printing of functions, ghost methods, and proof
     public string DafnyPrintFile = null;
     public bool AllowSourceFolders = false;
     public bool UseSeqTheory = false;
+
+    public bool UseSeqs = false;
+    public bool UseSets = false;
+    public bool UseISets = false;
+    public bool UseMultiSets = false;
+    public bool UseMaps = false;
+    public bool UseIMaps = false;
+    public bool UseHeap = true;
+    public bool UseLit = true;
+    public bool UseTyDt = true;
+
     public List<string> SourceFolders { get; } = new(); // list of folders, for those commands that permit processing all source files in folders
 
     public enum ContractTestingMode {

@@ -56,6 +56,7 @@ axiom (forall v: Seq, t0: Ty :: { $Is(v, TSeq(t0)) }
     0 <= i && i < Seq#Length(v) ==>
     $IsBox(Seq#Index(v, i), t0)));
 
+#if USE_HEAP
 // Specialize $IsAlloc to Seq?
 //function $IsAlloc<T>(T,Ty,Heap): bool;
 axiom (forall v: Seq, t0: Ty, h: Heap :: { $IsAlloc(v, TSeq(t0), h) }
@@ -63,6 +64,7 @@ axiom (forall v: Seq, t0: Ty, h: Heap :: { $IsAlloc(v, TSeq(t0), h) }
   (forall i : int :: { Seq#Index(v, i) }
     0 <= i && i < Seq#Length(v) ==>
 	$IsAllocBox(Seq#Index(v, i), t0, h)));
+#endif
 
 // ---------------------------------------------------------------
 // -- Axiomatization of sequences --------------------------------
@@ -111,6 +113,7 @@ axiom (forall s: Seq, i: int, v: Box :: { Seq#Index(Seq#Build(s,v), i) }
 axiom (forall s: Seq, bx: Box, t: Ty :: { $Is(Seq#Build(s,bx),TSeq(t)) }
     $Is(s,TSeq(t)) && $IsBox(bx,t) ==> $Is(Seq#Build(s,bx),TSeq(t)));
 
+#if USE_HEAP
 function Seq#Create(ty: Ty, heap: Heap, len: int, init: HandleType): Seq;
 axiom (forall ty: Ty, heap: Heap, len: int, init: HandleType ::
   { Seq#Length(Seq#Create(ty, heap, len, init): Seq) }
@@ -120,6 +123,7 @@ axiom (forall ty: Ty, heap: Heap, len: int, init: HandleType, i: int ::
   { Seq#Index(Seq#Create(ty, heap, len, init), i) }
   $IsGoodHeap(heap) && 0 <= i && i < len ==>
   Seq#Index(Seq#Create(ty, heap, len, init), i) == Apply1(TInt, ty, heap, init, $Box(i)));
+#endif
 
 function Seq#Append(Seq, Seq): Seq;
 axiom (forall s0: Seq, s1: Seq :: { Seq#Length(Seq#Append(s0,s1)) }
@@ -214,6 +218,7 @@ axiom (forall s, t: Seq, n: int ::
   Seq#Take(Seq#Append(s, t), n) == s &&
   Seq#Drop(Seq#Append(s, t), n) == t);
 
+#if USE_HEAP
 function Seq#FromArray(h: Heap, a: ref): Seq;
 axiom (forall h: Heap, a: ref ::
   { Seq#Length(Seq#FromArray(h,a)) }
@@ -238,6 +243,7 @@ axiom (forall h0, h1: Heap, a: ref ::
 axiom (forall h: Heap, i: int, v: Box, a: ref ::
   { Seq#FromArray(update(h, a, IndexField(i), v), a) }
     0 <= i && i < _System.array.Length(a) ==> Seq#FromArray(update(h, a, IndexField(i), v), a) == Seq#Update(Seq#FromArray(h, a), i, v) );
+#endif
 
 // Commutability of Take and Drop with Update.
 axiom (forall s: Seq, i: int, v: Box, n: int ::
@@ -252,10 +258,12 @@ axiom (forall s: Seq, i: int, v: Box, n: int ::
 axiom (forall s: Seq, i: int, v: Box, n: int ::
         { Seq#Drop(Seq#Update(s, i, v), n) }
         0 <= i && i < n && n <= Seq#Length(s) ==> Seq#Drop(Seq#Update(s, i, v), n) == Seq#Drop(s, n));
+#if USE_HEAP
 // Extension axiom, triggers only on Takes from arrays.
 axiom (forall h: Heap, a: ref, n0, n1: int ::
         { Seq#Take(Seq#FromArray(h, a), n0), Seq#Take(Seq#FromArray(h, a), n1) }
         n0 + 1 == n1 && 0 <= n0 && n1 <= _System.array.Length(a) ==> Seq#Take(Seq#FromArray(h, a), n1) == Seq#Build(Seq#Take(Seq#FromArray(h, a), n0), read(h, a, IndexField(n0): Field Box)) );
+#endif
 // drop commutes with build.
 axiom (forall s: Seq, v: Box, n: int ::
         { Seq#Drop(Seq#Build(s, v), n) }

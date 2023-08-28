@@ -28,6 +28,7 @@ axiom (forall v: Map Box Box, t0: Ty, t1: Ty ::
     $Is(Map#Values(v), TSet(t1)) &&
     $Is(Map#Items(v), TSet(Tclass._System.Tuple2(t0, t1))));
 
+#if USE_HEAP
 axiom (forall v: Map Box Box, t0: Ty, t1: Ty, h: Heap ::
   { $IsAlloc(v, TMap(t0, t1), h) }
   $IsAlloc(v, TMap(t0, t1), h)
@@ -36,7 +37,7 @@ axiom (forall v: Map Box Box, t0: Ty, t1: Ty, h: Heap ::
       Map#Domain(v)[bx] ==>
         $IsAllocBox(Map#Elements(v)[bx], t1, h) &&
         $IsAllocBox(bx, t0, h)));
-
+#endif
 // ---------------------------------------------------------------
 // -- Axiomatization of Maps -------------------------------------
 // ---------------------------------------------------------------
@@ -100,10 +101,6 @@ axiom (forall<U,V> m: Map U V, v: V :: { Map#Values(m)[v] }
 // that it relies on the two destructors for 2-tuples.
 
 function Map#Items<U,V>(Map U V) : Set Box;
-
-function #_System._tuple#2._#Make2(Box, Box) : DatatypeType;
-function _System.Tuple2._0(DatatypeType) : Box;
-function _System.Tuple2._1(DatatypeType) : Box;
 
 axiom (forall m: Map Box Box, item: Box :: { Map#Items(m)[item] }
   Map#Items(m)[item] <==>

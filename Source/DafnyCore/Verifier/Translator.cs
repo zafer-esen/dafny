@@ -52,7 +52,7 @@ namespace Microsoft.Dafny {
         case null:
           break;
         case Boogie.Function boogieFunction:
-          boogieFunction.AddOtherDefinitionAxiom(axiom);
+          boogieFunction.OtherDefinitionAxioms.Add(axiom);
           break;
         case Boogie.Constant boogieConstant:
           boogieConstant.DefinitionAxioms.Add(axiom);
@@ -210,6 +210,88 @@ namespace Microsoft.Dafny {
     private bool InsertChecksums { get { return flags.InsertChecksums; } }
     private string UniqueIdPrefix { get { return flags.UniqueIdPrefix; } }
 
+    internal static class PredefDatatypes {
+      // returns accessor with name for ctor if it exists in dt, otherwise null
+      private static Bpl.DatatypeAccessor GetAccessor(Bpl.DatatypeTypeCtorDecl dt, 
+        String name,
+        Bpl.DatatypeConstructor ctor) {
+        var accessors = dt.GetAccessors(name);
+        return accessors == null || ctor == null ? null :
+          accessors.FirstOrDefault(accessor =>
+            accessor.ConstructorIndex == ctor.index);
+      }
+      
+      // Extracts the Ty datatype constructors and accessors from DafnyPrelude.
+      public class TyDatatype {
+        public readonly Bpl.DatatypeConstructor TBoolCtor;
+        public readonly Bpl.DatatypeConstructor TCharCtor;
+        public readonly Bpl.DatatypeConstructor TIntCtor;
+        public readonly Bpl.DatatypeConstructor TRealCtor;
+        public readonly Bpl.DatatypeConstructor TORDINALCtor;
+        
+        public readonly Bpl.DatatypeConstructor TBitvectorCtor;
+        public readonly Bpl.DatatypeAccessor TBitvectorLen;
+        
+        public readonly Bpl.DatatypeConstructor TSetCtor;
+        public readonly Bpl.DatatypeAccessor TSetElemTy;
+        
+        public readonly Bpl.DatatypeConstructor TISetCtor;
+        public readonly Bpl.DatatypeAccessor TISetElemTy;
+        
+        public readonly Bpl.DatatypeConstructor TMultiSetCtor;
+        public readonly Bpl.DatatypeAccessor TMultiSetElemTy;
+        
+        public readonly Bpl.DatatypeConstructor TSeqCtor;
+        public readonly Bpl.DatatypeAccessor TSeqElemTy;
+        
+        public readonly Bpl.DatatypeConstructor TMapCtor;
+        public readonly Bpl.DatatypeAccessor TMapKeyTy;
+        public readonly Bpl.DatatypeAccessor TMapElemTy;
+        
+        public readonly Bpl.DatatypeConstructor TIMapCtor;
+        public readonly Bpl.DatatypeAccessor TIMapKeyTy;
+        public readonly Bpl.DatatypeAccessor TIMapElemTy;
+        
+        public readonly Bpl.DatatypeConstructor TClassCtor;
+        public readonly Bpl.DatatypeAccessor TClassTag;
+
+        public TyDatatype(Bpl.DatatypeTypeCtorDecl tyDt) {
+          TBoolCtor = tyDt.GetConstructor("TBool");
+          TCharCtor = tyDt.GetConstructor("TChar");
+          TIntCtor = tyDt.GetConstructor("TInt");
+          TRealCtor = tyDt.GetConstructor("TReal");
+          TORDINALCtor = tyDt.GetConstructor("TORDINAL");
+
+          TBitvectorCtor = tyDt.GetConstructor("TBitvector");
+          TBitvectorLen = GetAccessor(tyDt, "len", TBitvectorCtor);
+          
+          TSetCtor = tyDt.GetConstructor("TSet");
+          TSetElemTy = GetAccessor(tyDt, "elemTy", TSetCtor);
+          
+          TISetCtor = tyDt.GetConstructor("TISet");
+          TISetElemTy = GetAccessor(tyDt, "elemTy", TISetCtor);
+
+          TMultiSetCtor = tyDt.GetConstructor("TMultiSet");
+          TMultiSetElemTy = GetAccessor(tyDt, "elemTy", TMultiSetCtor);
+
+          TSeqCtor = tyDt.GetConstructor("TSeq");
+          TSeqElemTy = GetAccessor(tyDt, "elemTy", TSeqCtor);
+          
+          TMapCtor = tyDt.GetConstructor("TMap");
+          TMapKeyTy = GetAccessor(tyDt, "keyTy", TMapCtor);
+          TMapElemTy = GetAccessor(tyDt, "elemTy", TMapCtor);
+
+          TIMapCtor = tyDt.GetConstructor("TIMap");
+          TIMapKeyTy = GetAccessor(tyDt, "keyTy", TIMapCtor);
+          TIMapElemTy = GetAccessor(tyDt, "elemTy", TIMapCtor);
+
+          TClassCtor = tyDt.GetConstructor("TClass");
+          TClassTag = GetAccessor(tyDt, "tag", TClassCtor);
+        }
+        // TODO: print error messages for missing ctors / accessors?
+      }
+    }
+
     internal class PredefinedDecls {
       public readonly Bpl.Type CharType;
       public readonly Bpl.Type RefType;
@@ -251,8 +333,10 @@ namespace Microsoft.Dafny {
       public readonly Bpl.Type LayerType;
       public readonly Bpl.Type DtCtorId;
       public readonly Bpl.Type Ty;
-      public readonly Bpl.Type TyTag;
-      public readonly Bpl.Type TyTagFamily;
+      public readonly PredefDatatypes.TyDatatype TyDt;
+      public readonly Bpl.Type ClassTag; // only used with TyDt
+      public readonly Bpl.Type TyTag; // not used with TyDt
+      public readonly Bpl.Type TyTagFamily; // not used with TyDt
       public readonly Bpl.Expr Null;
       public readonly Bpl.Constant AllocField;
       [ContractInvariantMethod]
@@ -298,7 +382,7 @@ namespace Microsoft.Dafny {
         Contract.Requires(ty != null);
         Contract.Ensures(Contract.Result<Bpl.Type>() != null);
 
-        return new Bpl.TypeSynonymAnnotation(Token.NoToken, finite ? setTypeCtor : isetTypeCtor, new List<Bpl.Type> { ty });
+        return new Bpl.TypeSynonymAnnotation(Token.NoToken, finite ? setTypeCtor : isetTypeCtor, new List<Bpl.Type> { });
       }
 
       public Bpl.Type MultiSetType(Bpl.IToken tok, Bpl.Type ty) {
@@ -343,7 +427,8 @@ namespace Microsoft.Dafny {
         return new Bpl.IdentifierExpr(tok, AllocField);
       }
 
-      public PredefinedDecls(Bpl.TypeCtorDecl charType, Bpl.TypeCtorDecl refType, Bpl.TypeCtorDecl boxType,
+      public PredefinedDecls(DafnyOptions options,
+                             Bpl.TypeCtorDecl charType, Bpl.TypeCtorDecl refType, Bpl.TypeCtorDecl boxType,
                              Bpl.TypeSynonymDecl setTypeCtor, Bpl.TypeSynonymDecl isetTypeCtor, Bpl.TypeSynonymDecl multiSetTypeCtor,
                              Bpl.TypeCtorDecl mapTypeCtor, Bpl.TypeCtorDecl imapTypeCtor,
                              Bpl.Function arrayLength, Bpl.Function realFloor,
@@ -353,7 +438,8 @@ namespace Microsoft.Dafny {
                              Bpl.Function objectTypeConstructor,
                              Bpl.Function tuple2Destructors0, Bpl.Function tuple2Destructors1, Bpl.Function tuple2Constructor, Bpl.Function tuple2TypeConstructor,
                              Bpl.NamedDeclaration seqTypeCtor, Bpl.TypeSynonymDecl bv0TypeDecl,
-                             Bpl.TypeCtorDecl fieldNameType, Bpl.TypeCtorDecl tyType, Bpl.TypeCtorDecl tyTagType, Bpl.TypeCtorDecl tyTagFamilyType,
+                             Bpl.TypeCtorDecl fieldNameType, Bpl.TypeCtorDecl tyType, PredefDatatypes.TyDatatype tyDt, Bpl.TypeCtorDecl classTagType,
+                             Bpl.TypeCtorDecl tyTagType, Bpl.TypeCtorDecl tyTagFamilyType,
                              Bpl.GlobalVariable heap, Bpl.TypeCtorDecl classNameType, Bpl.TypeCtorDecl nameFamilyType,
                              Bpl.TypeCtorDecl datatypeType, Bpl.TypeCtorDecl handleType, Bpl.TypeCtorDecl layerType, Bpl.TypeCtorDecl dtCtorId,
                              Bpl.Constant allocField) {
@@ -391,8 +477,10 @@ namespace Microsoft.Dafny {
         Contract.Requires(dtCtorId != null);
         Contract.Requires(allocField != null);
         Contract.Requires(tyType != null);
-        Contract.Requires(tyTagType != null);
-        Contract.Requires(tyTagFamilyType != null);
+        Contract.Requires(options.UseTyDt || tyTagType != null);
+        Contract.Requires(options.UseTyDt || tyTagFamilyType != null);
+        Contract.Requires(!options.UseTyDt || tyDt != null);
+        Contract.Requires(!options.UseTyDt || classTagType != null);
         #endregion
 
         this.CharType = new Bpl.CtorType(Token.NoToken, charType, new List<Bpl.Type>());
@@ -427,6 +515,8 @@ namespace Microsoft.Dafny {
         this.HeapType = heap.TypedIdent.Type;
         this.HeapVarName = heap.Name;
         this.Ty = new Bpl.CtorType(Token.NoToken, tyType, new List<Bpl.Type>());
+        this.TyDt = tyDt;
+        this.ClassTag = options.UseTyDt ? new Bpl.CtorType(Token.NoToken, classTagType, new List<Bpl.Type>()) : null;
         this.TyTag = new Bpl.CtorType(Token.NoToken, tyTagType, new List<Bpl.Type>());
         this.TyTagFamily = new Bpl.CtorType(Token.NoToken, tyTagFamilyType, new List<Bpl.Type>());
         this.ClassNameType = new Bpl.CtorType(Token.NoToken, classNameType, new List<Bpl.Type>());
@@ -474,6 +564,8 @@ namespace Microsoft.Dafny {
       Bpl.TypeCtorDecl classNameType = null;
       Bpl.TypeSynonymDecl bv0TypeDecl = null;
       Bpl.TypeCtorDecl tyType = null;
+      PredefDatatypes.TyDatatype tyDatatype = null;
+      Bpl.TypeCtorDecl classTagType = null;
       Bpl.TypeCtorDecl tyTagType = null;
       Bpl.TypeCtorDecl tyTagFamilyType = null;
       Bpl.TypeCtorDecl nameFamilyType = null;
@@ -487,12 +579,19 @@ namespace Microsoft.Dafny {
       Bpl.GlobalVariable heap = null;
       Bpl.Constant allocField = null;
       foreach (var d in prog.TopLevelDeclarations) {
-        if (d is Bpl.TypeCtorDecl) {
+        if (d is Bpl.DatatypeTypeCtorDecl && 
+            ((Bpl.DatatypeTypeCtorDecl)d).Name == "Ty") {
+          Bpl.DatatypeTypeCtorDecl dt = (Bpl.DatatypeTypeCtorDecl)d;
+          tyType = dt;
+          tyDatatype = new PredefDatatypes.TyDatatype(dt);
+        } else if (d is Bpl.TypeCtorDecl) {
           Bpl.TypeCtorDecl dt = (Bpl.TypeCtorDecl)d;
           if (dt.Name == "Field") {
             fieldNameType = dt;
           } else if (dt.Name == "ClassName") {
             classNameType = dt;
+          } else if (dt.Name == "ClassTag") {
+            classTagType = dt;
           } else if (dt.Name == "Ty") {
             tyType = dt;
           } else if (dt.Name == "TyTag") {
@@ -584,17 +683,17 @@ namespace Microsoft.Dafny {
           }
         }
       }
-      if (seqTypeCtor == null) {
+      if (seqTypeCtor == null && options.UseSeqs) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of type Seq");
-      } else if (setTypeCtor == null) {
+      } else if (setTypeCtor == null && options.UseSets) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of type Set");
-      } else if (isetTypeCtor == null) {
+      } else if (isetTypeCtor == null && options.UseISets) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of type ISet");
-      } else if (multiSetTypeCtor == null) {
+      } else if (multiSetTypeCtor == null && options.UseMultiSets) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of type MultiSet");
-      } else if (mapTypeCtor == null) {
+      } else if (mapTypeCtor == null && options.UseMaps) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of type Map");
-      } else if (imapTypeCtor == null) {
+      } else if (imapTypeCtor == null && options.UseIMaps) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of type IMap");
       } else if (arrayLength == null) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of function _System.array.Length");
@@ -608,23 +707,23 @@ namespace Microsoft.Dafny {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of function ORD#Offset");
       } else if (ORDINAL_isNat == null) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of function ORD#IsNat");
-      } else if (mapDomain == null) {
+      } else if (mapDomain == null && options.UseMaps) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of function Map#Domain");
-      } else if (imapDomain == null) {
+      } else if (imapDomain == null && options.UseIMaps) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of function IMap#Domain");
-      } else if (mapValues == null) {
+      } else if (mapValues == null && options.UseMaps) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of function Map#Values");
-      } else if (imapValues == null) {
+      } else if (imapValues == null && options.UseIMaps) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of function IMap#Values");
-      } else if (mapItems == null) {
+      } else if (mapItems == null && options.UseMaps) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of function Map#Items");
-      } else if (imapItems == null) {
+      } else if (imapItems == null && options.UseIMaps) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of function IMap#Items");
-      } else if (tuple2Destructors0 == null) {
+      } else if (tuple2Destructors0 == null && options.UseMaps) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of function _System.Tuple2._0");
-      } else if (tuple2Destructors1 == null) {
+      } else if (tuple2Destructors1 == null && options.UseMaps) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of function _System.Tuple2._1");
-      } else if (tuple2Constructor == null) {
+      } else if (tuple2Constructor == null && options.UseMaps) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of function #_System._tuple#2._#Make2");
       } else if (bv0TypeDecl == null) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of type Bv0");
@@ -634,9 +733,9 @@ namespace Microsoft.Dafny {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of type ClassName");
       } else if (tyType == null) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of type Ty");
-      } else if (tyTagType == null) {
+      } else if (tyTagType == null && !options.UseTyDt) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of type TyTag");
-      } else if (tyTagFamilyType == null) {
+      } else if (tyTagFamilyType == null && !options.UseTyDt) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of type TyTagFamily");
       } else if (nameFamilyType == null) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of type NameFamily");
@@ -663,7 +762,7 @@ namespace Microsoft.Dafny {
       } else if (objectTypeConstructor == null) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of objectTypeConstructor");
       } else {
-        return new PredefinedDecls(charType, refType, boxType,
+        return new PredefinedDecls(options, charType, refType, boxType,
                                    setTypeCtor, isetTypeCtor, multiSetTypeCtor,
                                    mapTypeCtor, imapTypeCtor,
                                    arrayLength, realFloor,
@@ -673,7 +772,7 @@ namespace Microsoft.Dafny {
                                    objectTypeConstructor,
                                    tuple2Destructors0, tuple2Destructors1, tuple2Constructor, tuple2TypeConstructor,
                                    seqTypeCtor, bv0TypeDecl,
-                                   fieldNameType, tyType, tyTagType, tyTagFamilyType,
+                                   fieldNameType, tyType, tyDatatype, classTagType, tyTagType, tyTagFamilyType,
                                    heap, classNameType, nameFamilyType,
                                    datatypeType, handleType, layerType, dtCtorId,
                                    allocField);
@@ -683,20 +782,21 @@ namespace Microsoft.Dafny {
 
     Bpl.Program ReadPrelude() {
       string codebase = cce.NonNull(System.IO.Path.GetDirectoryName(cce.NonNull(System.Reflection.Assembly.GetExecutingAssembly().Location)));
-      var preludePath = System.IO.Path.Combine(codebase, "DafnyPrelude.bpl");
+      var preludePath = "";
       string combinedPrelude;
       if (options.DafnyPrelude == null) {
         var theoryPreludes = new Dictionary<string, string> {
-          { "Seq", options.UseSeqTheory ? "DafnyPreludeSeqNative.bpl" : "DafnyPreludeSeqAxiom.bpl" },
-          { "Set", "DafnyPreludeSetAxiom.bpl" },
-          { "ISet", "DafnyPreludeISetAxiom.bpl" },
-          { "MultiSet", "DafnyPreludeMultiSetAxiom.bpl" },
-          { "Map", "DafnyPreludeMapAxiom.bpl" },
-          { "IMap", "DafnyPreludeIMapAxiom.bpl" }
+          {"Base", options.UseTyDt ? "DafnyPreludeTyDt.bpl" : "DafnyPrelude.bpl"},
+          { "Seq", options.UseSeqs ? (options.UseSeqTheory ? "DafnyPreludeSeqNative.bpl" : "DafnyPreludeSeqAxiom.bpl") : "" },
+          { "Set", options.UseSets ? "DafnyPreludeSetAxiom.bpl" : "" },
+          { "ISet", options.UseISets ? "DafnyPreludeISetAxiom.bpl" : "" },
+          { "MultiSet", options.UseMultiSets ? "DafnyPreludeMultiSetAxiom.bpl" : "" },
+          { "Map", options.UseMaps ? "DafnyPreludeMapAxiom.bpl" : "" },
+          { "IMap", options.UseIMaps ? "DafnyPreludeIMapAxiom.bpl" : "" }
         };
 
-        var selectedFiles = new List<string> { preludePath };
-        selectedFiles.AddRange(theoryPreludes.Values.Select(v => System.IO.Path.Combine(codebase, v)));
+        var selectedFiles =
+          theoryPreludes.Values.Where(v => v != "").Select(v => System.IO.Path.Combine(codebase, v));
 
         combinedPrelude = selectedFiles
           .Select(filePath => System.IO.File.ReadAllText(filePath))
@@ -707,6 +807,13 @@ namespace Microsoft.Dafny {
 
       var defines = new List<string>();
       //defines.Add("SEQ_INLINE");
+
+      if (options.UseHeap) {
+        defines.Add("USE_HEAP");
+      }
+      if (options.UseSets) {
+        defines.Add("USE_SETS");
+      }
       if (6 <= options.ArithMode) {
         defines.Add("ARITH_DISTR");
       }
@@ -855,9 +962,12 @@ namespace Microsoft.Dafny {
 
       filterOnlyMembers = false;
 
-      foreach (var c in tytagConstants.Values) {
-        sink.AddTopLevelDeclaration(c);
+      if (!options.UseTyDt) {
+        foreach (var c in tytagConstants.Values) {
+          sink.AddTopLevelDeclaration(c);
+        }
       }
+
       foreach (var c in fieldConstants.Values) {
         sink.AddTopLevelDeclaration(c);
       }
@@ -6596,20 +6706,29 @@ namespace Microsoft.Dafny {
 
       if (!td.EnclosingModuleDefinition.IsFacade) {
         var tagName = "Tag" + inner_name;
-        var tag = new Bpl.Constant(tok, new Bpl.TypedIdent(tok, tagName, predef.TyTag), true);
-        sink.AddTopLevelDeclaration(tag);
-        body = Bpl.Expr.Eq(FunctionCall(tok, "Tag", predef.TyTag, inner), new Bpl.IdentifierExpr(tok, tag));
+        if (options.UseTyDt) {
+          var tag = new Bpl.Constant(tok, new Bpl.TypedIdent(tok, tagName, predef.ClassTag), true);
+          sink.AddTopLevelDeclaration(tag);
+          var f = predef.TyDt.TClassCtor;
+          body = Bpl.Expr.Eq(inner, 
+            FunctionCall(f.tok, f.Name, predef.Ty, new Bpl.IdentifierExpr(tok, tag)));
+        } else {
+          var tag = new Bpl.Constant(tok, new Bpl.TypedIdent(tok, tagName, predef.TyTag), true);
+          sink.AddTopLevelDeclaration(tag);
+          body = Bpl.Expr.Eq(FunctionCall(tok, "Tag", predef.TyTag, inner), new Bpl.IdentifierExpr(tok, tag));
+        }
       }
 
-      if (!tytagConstants.TryGetValue(td.Name, out var tagFamily)) {
-        tagFamily = new Bpl.Constant(Token.NoToken,
-          new Bpl.TypedIdent(Token.NoToken, "tytagFamily$" + td.Name, predef.TyTagFamily), true);
-        tytagConstants.Add(td.Name, tagFamily);
+      if (!options.UseTyDt) {
+        if (!tytagConstants.TryGetValue(td.Name, out var tagFamily)) {
+          tagFamily = new Bpl.Constant(Token.NoToken,
+            new Bpl.TypedIdent(Token.NoToken, "tytagFamily$" + td.Name, predef.TyTagFamily), true);
+          tytagConstants.Add(td.Name, tagFamily);
+        }
+
+        body = BplAnd(body,
+          Bpl.Expr.Eq(FunctionCall(tok, "TagFamily", predef.TyTagFamily, inner), new Bpl.IdentifierExpr(tok, tagFamily)));
       }
-
-      body = BplAnd(body,
-        Bpl.Expr.Eq(FunctionCall(tok, "TagFamily", predef.TyTagFamily, inner), new Bpl.IdentifierExpr(tok, tagFamily)));
-
       var qq = BplForall(args, BplTrigger(inner), body);
       var tagAxiom = new Axiom(tok, qq, name + " Tag");
       return tagAxiom;
@@ -8360,28 +8479,47 @@ namespace Microsoft.Dafny {
         return ClassTyCon(((UserDefinedType)type), args);
       } else if (type is SetType) {
         bool finite = ((SetType)type).Finite;
-        return FunctionCall(Token.NoToken, finite ? "TSet" : "TISet", predef.Ty, TypeToTy(((CollectionType)type).Arg));
+        var fName = options.UseTyDt
+          ? finite ? predef.TyDt.TSetCtor.Name : predef.TyDt.TISetCtor.Name
+          : finite ? "TSet" : "TISet";
+        return FunctionCall(Token.NoToken, fName, predef.Ty, TypeToTy(((CollectionType)type).Arg));
       } else if (type is MultiSetType) {
-        return FunctionCall(Token.NoToken, "TMultiSet", predef.Ty, TypeToTy(((CollectionType)type).Arg));
+        var fName = options.UseTyDt ? predef.TyDt.TMultiSetCtor.Name : "TMultiSet";
+        return FunctionCall(Token.NoToken, fName, predef.Ty, TypeToTy(((CollectionType)type).Arg));
       } else if (type is SeqType) {
-        return FunctionCall(Token.NoToken, "TSeq", predef.Ty, TypeToTy(((CollectionType)type).Arg));
+        var fName = options.UseTyDt ? predef.TyDt.TSeqCtor.Name : "TSeq";
+        return FunctionCall(Token.NoToken, fName, predef.Ty, TypeToTy(((CollectionType)type).Arg));
       } else if (type is MapType) {
         bool finite = ((MapType)type).Finite;
-        return FunctionCall(Token.NoToken, finite ? "TMap" : "TIMap", predef.Ty,
+        var fName = options.UseTyDt
+          ? finite ? predef.TyDt.TMapCtor.Name : predef.TyDt.TISetCtor.Name
+          : finite ? "TMap" : "TIMap";
+        return FunctionCall(Token.NoToken, fName, predef.Ty,
           TypeToTy(((MapType)type).Domain),
           TypeToTy(((MapType)type).Range));
-      } else if (type is BoolType) {
+      } else if (type is BoolType && options.UseTyDt) {
+        return FunctionCall(Token.NoToken, predef.TyDt.TBoolCtor.Name, predef.Ty, Nil<Expr>());
+      } else if (type is BoolType && !options.UseTyDt) {
         return new Bpl.IdentifierExpr(Token.NoToken, "TBool", predef.Ty);
-      } else if (type is CharType) {
+      } else if (type is CharType && options.UseTyDt) {
+        return FunctionCall(Token.NoToken, predef.TyDt.TCharCtor.Name, predef.Ty, Nil<Expr>());
+      } else if (type is CharType && !options.UseTyDt) {
         return new Bpl.IdentifierExpr(Token.NoToken, "TChar", predef.Ty);
-      } else if (type is RealType) {
+      } else if (type is RealType && options.UseTyDt) {
+        return FunctionCall(Token.NoToken, predef.TyDt.TRealCtor.Name, predef.Ty, Nil<Expr>());
+      } else if (type is RealType && !options.UseTyDt) {
         return new Bpl.IdentifierExpr(Token.NoToken, "TReal", predef.Ty);
       } else if (type is BitvectorType) {
         var t = (BitvectorType)type;
-        return FunctionCall(Token.NoToken, "TBitvector", predef.Ty, Bpl.Expr.Literal(t.Width));
-      } else if (type is IntType) {
+        var fName = options.UseTyDt ? predef.TyDt.TBitvectorCtor.Name : "TBitvector";
+        return FunctionCall(Token.NoToken, fName, predef.Ty, Bpl.Expr.Literal(t.Width));
+      } else if (type is IntType && options.UseTyDt) {
+        return FunctionCall(Token.NoToken, predef.TyDt.TIntCtor.Name, predef.Ty, Nil<Expr>());
+      } else if (type is IntType && !options.UseTyDt) {
         return new Bpl.IdentifierExpr(Token.NoToken, "TInt", predef.Ty);
-      } else if (type is BigOrdinalType) {
+      } else if (type is BigOrdinalType && options.UseTyDt) {
+        return FunctionCall(Token.NoToken, predef.TyDt.TORDINALCtor.Name, predef.Ty, Nil<Expr>());
+      } else if (type is BigOrdinalType && !options.UseTyDt) {
         return new Bpl.IdentifierExpr(Token.NoToken, "TORDINAL", predef.Ty);
       } else if (type is ParamTypeProxy) {
         return TrTypeParameter(((ParamTypeProxy)type).orig);

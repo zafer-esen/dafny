@@ -49,6 +49,9 @@ namespace Microsoft.Dafny {
       Lit,
       LitInt,
       LitReal,
+      LitBool,
+      LitDatatypeType,
+      LitBox,
       LayerSucc,
       AsFuelBottom,
       CharFromInt,
@@ -157,10 +160,19 @@ namespace Microsoft.Dafny {
       // To avoid Boogie's int_2_U and U_2_int conversions, which seem to cause problems with
       // arithmetic reasoning, we use several Lit functions.  In particular, we use one for
       // integers, one for reals, and one for everything else.
-      if (typ.IsInt) {
+      if (!options.UseLit) {
+        return expr;
+      } else if (typ.IsInt) {
         return FunctionCall(expr.tok, BuiltinFunction.LitInt, null, expr);
       } else if (typ.IsReal) {
         return FunctionCall(expr.tok, BuiltinFunction.LitReal, null, expr);
+      } else if (typ.IsBool) {
+        return FunctionCall(expr.tok, BuiltinFunction.LitBool, null, expr);
+      } else if (typ.Equals(predef.DatatypeType)) {
+        return FunctionCall(expr.tok, BuiltinFunction.LitDatatypeType, null, expr);
+      } else if (typ.Equals(predef.BoxType) && 
+                 (expr.ShallowType == null || expr.ShallowType.Equals(predef.BoxType))) {
+        return FunctionCall(expr.tok, BuiltinFunction.LitBox, null, expr);
       } else {
         return FunctionCall(expr.tok, BuiltinFunction.Lit, typ, expr);
       }
@@ -174,8 +186,10 @@ namespace Microsoft.Dafny {
       if (expr is Bpl.NAryExpr) {
         Bpl.NAryExpr app = (Bpl.NAryExpr)expr;
         switch (app.Fun.FunctionName) {
+          case "LitBool":
           case "LitInt":
           case "LitReal":
+          case "LitBox":
           case "Lit":
             return app.Args[0];
           default:
@@ -211,7 +225,7 @@ namespace Microsoft.Dafny {
     }
 
     // The "typeInstantiation" argument is passed in to help construct the result type of the function.
-    Bpl.NAryExpr FunctionCall(Bpl.IToken tok, BuiltinFunction f, Bpl.Type typeInstantiation, params Bpl.Expr[] args) {
+    Bpl.Expr FunctionCall(Bpl.IToken tok, BuiltinFunction f, Bpl.Type typeInstantiation, params Bpl.Expr[] args) {
       Contract.Requires(tok != null);
       Contract.Requires(args != null);
       Contract.Requires(predef != null);
@@ -226,6 +240,18 @@ namespace Microsoft.Dafny {
           Contract.Assert(args.Length == 1);
           Contract.Assert(typeInstantiation == null);
           return FunctionCall(tok, "LitReal", Bpl.Type.Real, args);
+        case BuiltinFunction.LitBool:
+          Contract.Assert(args.Length == 1);
+          Contract.Assert(typeInstantiation == null);
+          return FunctionCall(tok, "LitBool", Bpl.Type.Bool, args);
+        case BuiltinFunction.LitDatatypeType:
+          Contract.Assert(args.Length == 1);
+          Contract.Assert(typeInstantiation == null);
+          return FunctionCall(tok, "LitDatatypeType", predef.DatatypeType, args);
+        case BuiltinFunction.LitBox:
+          Contract.Assert(args.Length == 1);
+          Contract.Assert(typeInstantiation == null);
+          return FunctionCall(tok, "LitBox", predef.BoxType, args);
         case BuiltinFunction.Lit:
           Contract.Assert(args.Length == 1);
           Contract.Assert(typeInstantiation != null);
