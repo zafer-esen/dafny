@@ -211,138 +211,137 @@ namespace Microsoft.Dafny {
     private string UniqueIdPrefix { get { return flags.UniqueIdPrefix; } }
 
     internal static class PredefDatatypes {
-      // returns accessor with name for ctor if it exists in dt, otherwise null
-      private static Bpl.DatatypeAccessor getAccessor(Bpl.DatatypeTypeCtorDecl dt,
-        String name,
-        Bpl.DatatypeConstructor ctor) {
-        var accessors = dt.GetAccessors(name);
-        return accessors == null || ctor == null
-          ? null
-          : accessors.FirstOrDefault(accessor =>
-            accessor.ConstructorIndex == ctor.index);
+      public static NAryExpr MkFieldAccess(Bpl.IToken tok, Bpl.Expr expr, string fieldName) {
+        return new NAryExpr(tok, new FieldAccess(Token.NoToken, fieldName), new Expr[] { expr });
+      }
+
+      public static NAryExpr MkIsConstructor(Bpl.IToken tok, Bpl.Expr expr, string ctorName) {
+        return new NAryExpr(tok, new IsConstructor(tok, ctorName), new List<Expr>{ expr });
       }
 
       // Extracts the Ty datatype constructors and accessors from DafnyPrelude.
       public class TyDatatype {
-        public readonly Bpl.DatatypeConstructor TBoolCtor;
-        public readonly Bpl.DatatypeConstructor TCharCtor;
-        public readonly Bpl.DatatypeConstructor TIntCtor;
-        public readonly Bpl.DatatypeConstructor TRealCtor;
-        public readonly Bpl.DatatypeConstructor TORDINALCtor;
+        public readonly Bpl.DatatypeTypeCtorDecl Dt;
 
-        public readonly Bpl.DatatypeConstructor TBitvectorCtor;
-        public readonly Bpl.DatatypeAccessor TBitvectorLen;
+        public readonly string TBoolCtor;
+        public readonly string TCharCtor;
+        public readonly string TIntCtor;
+        public readonly string TRealCtor;
+        public readonly string TORDINALCtor;
 
-        public readonly Bpl.DatatypeConstructor TSetCtor;
-        public readonly Bpl.DatatypeAccessor TSetElemTy;
+        public readonly string TBitvectorCtor;
+        public readonly string TBitvectorLen;
 
-        public readonly Bpl.DatatypeConstructor TISetCtor;
-        public readonly Bpl.DatatypeAccessor TISetElemTy;
+        public readonly string TSetCtor;
+        public readonly string TSetElemTy;
 
-        public readonly Bpl.DatatypeConstructor TMultiSetCtor;
-        public readonly Bpl.DatatypeAccessor TMultiSetElemTy;
+        public readonly string TISetCtor;
+        public readonly string TISetElemTy;
 
-        public readonly Bpl.DatatypeConstructor TSeqCtor;
-        public readonly Bpl.DatatypeAccessor TSeqElemTy;
+        public readonly string TMultiSetCtor;
+        public readonly string TMultiSetElemTy;
 
-        public readonly Bpl.DatatypeConstructor TMapCtor;
-        public readonly Bpl.DatatypeAccessor TMapKeyTy;
-        public readonly Bpl.DatatypeAccessor TMapElemTy;
+        public readonly string TSeqCtor;
+        public readonly string TSeqElemTy;
 
-        public readonly Bpl.DatatypeConstructor TIMapCtor;
-        public readonly Bpl.DatatypeAccessor TIMapKeyTy;
-        public readonly Bpl.DatatypeAccessor TIMapElemTy;
+        public readonly string TMapCtor;
+        public readonly string TMapKeyTy;
+        public readonly string TMapElemTy;
 
-        public readonly Bpl.DatatypeConstructor TClassCtor;
-        public readonly Bpl.DatatypeAccessor TClassTag;
+        public readonly string TIMapCtor;
+        public readonly string TIMapKeyTy;
+        public readonly string TIMapElemTy;
+
+        public readonly string TClassCtor;
+        public readonly string TClassTag;
 
         public TyDatatype(Bpl.DatatypeTypeCtorDecl tyDt) {
-          TBoolCtor = tyDt.GetConstructor("TBool");
-          TCharCtor = tyDt.GetConstructor("TChar");
-          TIntCtor = tyDt.GetConstructor("TInt");
-          TRealCtor = tyDt.GetConstructor("TReal");
-          TORDINALCtor = tyDt.GetConstructor("TORDINAL");
+          Dt = tyDt;
+          TBoolCtor = "TBool";
+          TCharCtor = "TChar";
+          TIntCtor = "TInt";
+          TRealCtor = "TReal";
+          TORDINALCtor = "TORDINAL";
 
-          TBitvectorCtor = tyDt.GetConstructor("TBitvector");
-          TBitvectorLen = getAccessor(tyDt, "len", TBitvectorCtor);
+          TBitvectorCtor = "TBitvector";
+          TBitvectorLen = "len";
 
-          TSetCtor = tyDt.GetConstructor("TSet");
-          TSetElemTy = getAccessor(tyDt, "elemTy", TSetCtor);
+          TSetCtor = "TSet";
+          TSetElemTy = "elemTy";
 
-          TISetCtor = tyDt.GetConstructor("TISet");
-          TISetElemTy = getAccessor(tyDt, "elemTy", TISetCtor);
+          TISetCtor = "TISet";
+          TISetElemTy = "elemTy";
 
-          TMultiSetCtor = tyDt.GetConstructor("TMultiSet");
-          TMultiSetElemTy = getAccessor(tyDt, "elemTy", TMultiSetCtor);
+          TMultiSetCtor = "TMultiSet";
+          TMultiSetElemTy = "elemTy";
 
-          TSeqCtor = tyDt.GetConstructor("TSeq");
-          TSeqElemTy = getAccessor(tyDt, "elemTy", TSeqCtor);
+          TSeqCtor = "TSeq";
+          TSeqElemTy = "elemTy";
 
-          TMapCtor = tyDt.GetConstructor("TMap");
-          TMapKeyTy = getAccessor(tyDt, "keyTy", TMapCtor);
-          TMapElemTy = getAccessor(tyDt, "elemTy", TMapCtor);
+          TMapCtor = "TMap";
+          TMapKeyTy = "keyTy";
+          TMapElemTy = "elemTy";
 
-          TIMapCtor = tyDt.GetConstructor("TIMap");
-          TIMapKeyTy = getAccessor(tyDt, "keyTy", TIMapCtor);
-          TIMapElemTy = getAccessor(tyDt, "elemTy", TIMapCtor);
+          TIMapCtor = "TIMap";
+          TIMapKeyTy = "keyTy";
+          TIMapElemTy = "elemTy";
 
-          TClassCtor = tyDt.GetConstructor("TClass");
-          TClassTag = getAccessor(tyDt, "tag", TClassCtor);
+          TClassCtor = "TClass";
+          TClassTag = "tag";
         }
         // TODO: print error messages for missing ctors / accessors?
       }
 
       public class BoxDatatype {
-        public readonly Bpl.DatatypeConstructor BoxBoolCtor;
-        public readonly Bpl.DatatypeAccessor BoxBoolSel;
+        public readonly string BoxBoolCtor;
+        public readonly string BoxBoolSel;
 
-        public readonly Bpl.DatatypeConstructor BoxCharCtor;
-        public readonly Bpl.DatatypeAccessor BoxCharSel;
+        public readonly string BoxCharCtor;
+        public readonly string BoxCharSel;
 
-        public readonly Bpl.DatatypeConstructor BoxIntCtor;
-        public readonly Bpl.DatatypeAccessor BoxIntSel;
+        public readonly string BoxIntCtor;
+        public readonly string BoxIntSel;
 
-        public readonly Bpl.DatatypeConstructor BoxRealCtor;
-        public readonly Bpl.DatatypeAccessor BoxRealSel;
+        public readonly string BoxRealCtor;
+        public readonly string BoxRealSel;
 
-        public readonly Bpl.DatatypeConstructor BoxRefCtor;
-        public readonly Bpl.DatatypeAccessor BoxRefSel;
+        public readonly string BoxRefCtor;
+        public readonly string BoxRefSel;
 
-        public readonly Bpl.DatatypeConstructor BoxDatatypeCtor;
-        public readonly Bpl.DatatypeAccessor BoxDatatypeSel;
+        public readonly string BoxDatatypeCtor;
+        public readonly string BoxDatatypeSel;
 
-        public readonly IDictionary<int, Bpl.DatatypeConstructor> BitwidthToBoxBvCtor;
-        public readonly IDictionary<int, Bpl.DatatypeAccessor> BitwidthToBoxBvSel;
+        public readonly IDictionary<int, string> BitwidthToBoxBvCtor;
+        public readonly IDictionary<int, string> BitwidthToBoxBvSel;
         public BoxDatatype(Bpl.DatatypeTypeCtorDecl boxDt, IEnumerable<int> bitwidths) {
-          BitwidthToBoxBvCtor = new Dictionary<int, DatatypeConstructor>();
-          BitwidthToBoxBvSel = new Dictionary<int, DatatypeAccessor>();
+          BitwidthToBoxBvCtor = new Dictionary<int, string>();
+          BitwidthToBoxBvSel = new Dictionary<int, string>();
           foreach (var bitwidth in bitwidths) {
             var ctorName = "BoxBv" + bitwidth;
             var selName = "vBv" + bitwidth;
             var selIdent = new TypedIdent(Bpl.Token.NoToken, selName, new BvType(bitwidth));
             boxDt.AddConstructor(Bpl.Token.NoToken, ctorName, new List<TypedIdent>{ selIdent });
-            var ctor = boxDt.GetConstructor(ctorName);
-            BitwidthToBoxBvCtor.Add(bitwidth, ctor);
-            BitwidthToBoxBvSel.Add(bitwidth, getAccessor(boxDt, selName, ctor));
+            BitwidthToBoxBvCtor.Add(bitwidth, ctorName);
+            BitwidthToBoxBvSel.Add(bitwidth, selName);
           }
 
-          BoxBoolCtor = boxDt.GetConstructor("BoxBool");
-          BoxBoolSel = getAccessor(boxDt, "vBool", BoxBoolCtor);
+          BoxBoolCtor = "BoxBool";
+          BoxBoolSel = "vBool";
 
-          BoxCharCtor = boxDt.GetConstructor("BoxChar");
-          BoxCharSel = getAccessor(boxDt, "vChar", BoxCharCtor);
+          BoxCharCtor = "BoxChar";
+          BoxCharSel = "vChar";
 
-          BoxIntCtor = boxDt.GetConstructor("BoxInt");
-          BoxIntSel = getAccessor(boxDt, "vInt", BoxIntCtor);
+          BoxIntCtor = "BoxInt";
+          BoxIntSel = "vInt";
 
-          BoxRealCtor = boxDt.GetConstructor("BoxReal");
-          BoxRealSel = getAccessor(boxDt, "vReal", BoxRealCtor);
+          BoxRealCtor = "BoxReal";
+          BoxRealSel = "vReal";
 
-          BoxRefCtor = boxDt.GetConstructor("BoxRef");
-          BoxRefSel = getAccessor(boxDt, "vRef", BoxRefCtor);
+          BoxRefCtor = "BoxRef";
+          BoxRefSel = "vRef";
 
-          BoxDatatypeCtor = boxDt.GetConstructor("BoxDatatype");
-          BoxDatatypeSel = getAccessor(boxDt, "vDatatype", BoxDatatypeCtor);
+          BoxDatatypeCtor = "BoxDatatype";
+          BoxDatatypeSel = "vDatatype";
         }
       }
     }
@@ -1118,7 +1117,7 @@ namespace Microsoft.Dafny {
       var dafnyType = new BitvectorType(options, w);
       var boogieType = BplBvType(w);
       var typeTerm = TypeToTy(dafnyType);
-      AddBoxUnboxAxiom(tok, printableName, typeTerm, boogieType, new List<Variable>());
+      AddBoxUnboxAxiom(tok, printableName, typeTerm, boogieType, new List<Variable>(), w);
 
       // axiom (forall v: bv3 :: { $Is(v, TBitvector(3)) } $Is(v, TBitvector(3)));
       var vVar = BplBoundVar("v", boogieType, out var v);
@@ -6780,8 +6779,8 @@ namespace Microsoft.Dafny {
         if (options.UseTyDt) {
           var tag = new Bpl.Constant(tok, new Bpl.TypedIdent(tok, tagName, predef.ClassTag), true);
           sink.AddTopLevelDeclaration(tag);
-          var f = predef.TyDt.TClassCtor;
-          body = Bpl.Expr.Eq(inner, 
+          var f = (predef.TyDt.Dt).GetConstructor(predef.TyDt.TClassCtor);
+          body = Bpl.Expr.Eq(inner,
             FunctionCall(f.tok, f.Name, predef.Ty, new Bpl.IdentifierExpr(tok, tag)));
         } else {
           var tag = new Bpl.Constant(tok, new Bpl.TypedIdent(tok, tagName, predef.TyTag), true);
@@ -6813,7 +6812,7 @@ namespace Microsoft.Dafny {
     ///         $Box($Unbox(bx): tyRepr) == bx &&
     ///         $Is($Unbox(bx): tyRepr, name(argExprs)));
     /// </summary>
-    private void AddBoxUnboxAxiom(IToken tok, string printableName, Bpl.Expr typeTerm, Bpl.Type tyRepr, List<Variable> args) {
+    private void AddBoxUnboxAxiom(IToken tok, string printableName, Bpl.Expr typeTerm, Bpl.Type tyRepr, List<Variable> args, int bitwidth = 0) {
       Contract.Requires(tok != null);
       Contract.Requires(printableName != null);
       Contract.Requires(typeTerm != null);
@@ -6821,15 +6820,28 @@ namespace Microsoft.Dafny {
       Contract.Requires(args != null);
 
       var bxVar = BplBoundVar("bx", predef.BoxType, out var bx);
-      var unbox = FunctionCall(tok, BuiltinFunction.Unbox, tyRepr, bx);
-      var box_is = MkIs(bx, typeTerm, true);
-      var unbox_is = MkIs(unbox, typeTerm, false);
-      var box_unbox = FunctionCall(tok, BuiltinFunction.Box, null, unbox);
-      sink.AddTopLevelDeclaration(
-        new Axiom(tok,
-          BplForall(Snoc(args, bxVar), BplTrigger(box_is),
-            BplImp(box_is, BplAnd(Bpl.Expr.Eq(box_unbox, bx), unbox_is))),
-          "Box/unbox axiom for " + printableName));
+      if (bitwidth != 0) {
+        var bxExpr = new Bpl.IdentifierExpr(tok, bxVar);
+        var unbox = PredefDatatypes.MkFieldAccess(tok, bxExpr, predef.BoxDatatype.BitwidthToBoxBvSel[bitwidth]);
+        var bxIsCtor = PredefDatatypes.MkIsConstructor(tok, bxExpr, predef.BoxDatatype.BitwidthToBoxBvCtor[bitwidth]);
+        var box_is = MkIs(bx, typeTerm, true);
+        var unbox_is = MkIs(unbox, typeTerm, false);
+        sink.AddTopLevelDeclaration(
+          new Axiom(tok,
+            BplForall(Snoc(args, bxVar), BplTrigger(box_is),
+              BplImp(box_is, BplAnd(bxIsCtor, unbox_is))),
+            "Box/unbox axiom for " + printableName));
+      } else {
+        var unbox = FunctionCall(tok, BuiltinFunction.Unbox, tyRepr, bx);
+        var box_is = MkIs(bx, typeTerm, true);
+        var unbox_is = MkIs(unbox, typeTerm, false);
+        var box_unbox = FunctionCall(tok, BuiltinFunction.Box, null, unbox);
+        sink.AddTopLevelDeclaration(
+          new Axiom(tok,
+            BplForall(Snoc(args, bxVar), BplTrigger(box_is),
+              BplImp(box_is, BplAnd(Bpl.Expr.Eq(box_unbox, bx), unbox_is))),
+            "Box/unbox axiom for " + printableName));
+      }
     }
 
     Bpl.Constant GetClass(TopLevelDecl cl) {
@@ -8551,45 +8563,45 @@ namespace Microsoft.Dafny {
       } else if (type is SetType) {
         bool finite = ((SetType)type).Finite;
         var fName = options.UseTyDt
-          ? finite ? predef.TyDt.TSetCtor.Name : predef.TyDt.TISetCtor.Name
+          ? finite ? predef.TyDt.TSetCtor : predef.TyDt.TISetCtor
           : finite ? "TSet" : "TISet";
         return FunctionCall(Token.NoToken, fName, predef.Ty, TypeToTy(((CollectionType)type).Arg));
       } else if (type is MultiSetType) {
-        var fName = options.UseTyDt ? predef.TyDt.TMultiSetCtor.Name : "TMultiSet";
+        var fName = options.UseTyDt ? predef.TyDt.TMultiSetCtor : "TMultiSet";
         return FunctionCall(Token.NoToken, fName, predef.Ty, TypeToTy(((CollectionType)type).Arg));
       } else if (type is SeqType) {
-        var fName = options.UseTyDt ? predef.TyDt.TSeqCtor.Name : "TSeq";
+        var fName = options.UseTyDt ? predef.TyDt.TSeqCtor : "TSeq";
         return FunctionCall(Token.NoToken, fName, predef.Ty, TypeToTy(((CollectionType)type).Arg));
       } else if (type is MapType) {
         bool finite = ((MapType)type).Finite;
         var fName = options.UseTyDt
-          ? finite ? predef.TyDt.TMapCtor.Name : predef.TyDt.TISetCtor.Name
+          ? finite ? predef.TyDt.TMapCtor : predef.TyDt.TISetCtor
           : finite ? "TMap" : "TIMap";
         return FunctionCall(Token.NoToken, fName, predef.Ty,
           TypeToTy(((MapType)type).Domain),
           TypeToTy(((MapType)type).Range));
       } else if (type is BoolType && options.UseTyDt) {
-        return FunctionCall(Token.NoToken, predef.TyDt.TBoolCtor.Name, predef.Ty, Nil<Expr>());
+        return FunctionCall(Token.NoToken, predef.TyDt.TBoolCtor, predef.Ty, Nil<Expr>());
       } else if (type is BoolType && !options.UseTyDt) {
         return new Bpl.IdentifierExpr(Token.NoToken, "TBool", predef.Ty);
       } else if (type is CharType && options.UseTyDt) {
-        return FunctionCall(Token.NoToken, predef.TyDt.TCharCtor.Name, predef.Ty, Nil<Expr>());
+        return FunctionCall(Token.NoToken, predef.TyDt.TCharCtor, predef.Ty, Nil<Expr>());
       } else if (type is CharType && !options.UseTyDt) {
         return new Bpl.IdentifierExpr(Token.NoToken, "TChar", predef.Ty);
       } else if (type is RealType && options.UseTyDt) {
-        return FunctionCall(Token.NoToken, predef.TyDt.TRealCtor.Name, predef.Ty, Nil<Expr>());
+        return FunctionCall(Token.NoToken, predef.TyDt.TRealCtor, predef.Ty, Nil<Expr>());
       } else if (type is RealType && !options.UseTyDt) {
         return new Bpl.IdentifierExpr(Token.NoToken, "TReal", predef.Ty);
       } else if (type is BitvectorType) {
         var t = (BitvectorType)type;
-        var fName = options.UseTyDt ? predef.TyDt.TBitvectorCtor.Name : "TBitvector";
+        var fName = options.UseTyDt ? predef.TyDt.TBitvectorCtor : "TBitvector";
         return FunctionCall(Token.NoToken, fName, predef.Ty, Bpl.Expr.Literal(t.Width));
       } else if (type is IntType && options.UseTyDt) {
-        return FunctionCall(Token.NoToken, predef.TyDt.TIntCtor.Name, predef.Ty, Nil<Expr>());
+        return FunctionCall(Token.NoToken, predef.TyDt.TIntCtor, predef.Ty, Nil<Expr>());
       } else if (type is IntType && !options.UseTyDt) {
         return new Bpl.IdentifierExpr(Token.NoToken, "TInt", predef.Ty);
       } else if (type is BigOrdinalType && options.UseTyDt) {
-        return FunctionCall(Token.NoToken, predef.TyDt.TORDINALCtor.Name, predef.Ty, Nil<Expr>());
+        return FunctionCall(Token.NoToken, predef.TyDt.TORDINALCtor, predef.Ty, Nil<Expr>());
       } else if (type is BigOrdinalType && !options.UseTyDt) {
         return new Bpl.IdentifierExpr(Token.NoToken, "TORDINAL", predef.Ty);
       } else if (type is ParamTypeProxy) {
