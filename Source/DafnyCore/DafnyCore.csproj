@@ -39,6 +39,7 @@
   <ItemGroup>
     <Content Include="DafnyPrelude.bpl" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="DafnyPreludeTyDt.bpl" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="DafnyPreludeBoxDt.bpl" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="DafnyPreludeSeqNative.bpl" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="DafnyPreludeSeqAxiom.bpl" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="DafnyPreludeSetAxiom.bpl" CopyToOutputDirectory="PreserveNewest" />

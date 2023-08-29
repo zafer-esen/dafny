@@ -300,6 +300,7 @@ NoGhost - disable printing of functions, ghost methods, and proof
     public bool UseHeap = true;
     public bool UseLit = true;
     public bool UseTyDt = true;
+    public bool UseBoxDt = true; // implies UseTyDt
 
     public List<string> SourceFolders { get; } = new(); // list of folders, for those commands that permit processing all source files in folders
 

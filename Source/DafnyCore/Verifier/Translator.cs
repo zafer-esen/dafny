@@ -72,7 +72,7 @@ namespace Microsoft.Dafny {
     }
 
     [NotDelayed]
-    public Translator(ErrorReporter reporter, TranslatorFlags flags = null) {
+    public Translator(ErrorReporter reporter, ISet<int> bitwidths, TranslatorFlags flags = null) {
       this.options = reporter.Options;
       this.flags = new TranslatorFlags(options);
       triggersCollector = new Triggers.TriggersCollector(new Dictionary<Expression, HashSet<OldExpr>>(), options);
@@ -86,7 +86,7 @@ namespace Microsoft.Dafny {
       Bpl.Program boogieProgram = ReadPrelude();
       if (boogieProgram != null) {
         sink = boogieProgram;
-        predef = FindPredefinedDecls(boogieProgram);
+        predef = FindPredefinedDecls(boogieProgram, bitwidths);
       }
     }
 
@@ -212,15 +212,16 @@ namespace Microsoft.Dafny {
 
     internal static class PredefDatatypes {
       // returns accessor with name for ctor if it exists in dt, otherwise null
-      private static Bpl.DatatypeAccessor GetAccessor(Bpl.DatatypeTypeCtorDecl dt, 
+      private static Bpl.DatatypeAccessor getAccessor(Bpl.DatatypeTypeCtorDecl dt,
         String name,
         Bpl.DatatypeConstructor ctor) {
         var accessors = dt.GetAccessors(name);
-        return accessors == null || ctor == null ? null :
-          accessors.FirstOrDefault(accessor =>
+        return accessors == null || ctor == null
+          ? null
+          : accessors.FirstOrDefault(accessor =>
             accessor.ConstructorIndex == ctor.index);
       }
-      
+
       // Extracts the Ty datatype constructors and accessors from DafnyPrelude.
       public class TyDatatype {
         public readonly Bpl.DatatypeConstructor TBoolCtor;
@@ -228,30 +229,30 @@ namespace Microsoft.Dafny {
         public readonly Bpl.DatatypeConstructor TIntCtor;
         public readonly Bpl.DatatypeConstructor TRealCtor;
         public readonly Bpl.DatatypeConstructor TORDINALCtor;
-        
+
         public readonly Bpl.DatatypeConstructor TBitvectorCtor;
         public readonly Bpl.DatatypeAccessor TBitvectorLen;
-        
+
         public readonly Bpl.DatatypeConstructor TSetCtor;
         public readonly Bpl.DatatypeAccessor TSetElemTy;
-        
+
         public readonly Bpl.DatatypeConstructor TISetCtor;
         public readonly Bpl.DatatypeAccessor TISetElemTy;
-        
+
         public readonly Bpl.DatatypeConstructor TMultiSetCtor;
         public readonly Bpl.DatatypeAccessor TMultiSetElemTy;
-        
+
         public readonly Bpl.DatatypeConstructor TSeqCtor;
         public readonly Bpl.DatatypeAccessor TSeqElemTy;
-        
+
         public readonly Bpl.DatatypeConstructor TMapCtor;
         public readonly Bpl.DatatypeAccessor TMapKeyTy;
         public readonly Bpl.DatatypeAccessor TMapElemTy;
-        
+
         public readonly Bpl.DatatypeConstructor TIMapCtor;
         public readonly Bpl.DatatypeAccessor TIMapKeyTy;
         public readonly Bpl.DatatypeAccessor TIMapElemTy;
-        
+
         public readonly Bpl.DatatypeConstructor TClassCtor;
         public readonly Bpl.DatatypeAccessor TClassTag;
 
@@ -263,32 +264,86 @@ namespace Microsoft.Dafny {
           TORDINALCtor = tyDt.GetConstructor("TORDINAL");
 
           TBitvectorCtor = tyDt.GetConstructor("TBitvector");
-          TBitvectorLen = GetAccessor(tyDt, "len", TBitvectorCtor);
-          
+          TBitvectorLen = getAccessor(tyDt, "len", TBitvectorCtor);
+
           TSetCtor = tyDt.GetConstructor("TSet");
-          TSetElemTy = GetAccessor(tyDt, "elemTy", TSetCtor);
-          
+          TSetElemTy = getAccessor(tyDt, "elemTy", TSetCtor);
+
           TISetCtor = tyDt.GetConstructor("TISet");
-          TISetElemTy = GetAccessor(tyDt, "elemTy", TISetCtor);
+          TISetElemTy = getAccessor(tyDt, "elemTy", TISetCtor);
 
           TMultiSetCtor = tyDt.GetConstructor("TMultiSet");
-          TMultiSetElemTy = GetAccessor(tyDt, "elemTy", TMultiSetCtor);
+          TMultiSetElemTy = getAccessor(tyDt, "elemTy", TMultiSetCtor);
 
           TSeqCtor = tyDt.GetConstructor("TSeq");
-          TSeqElemTy = GetAccessor(tyDt, "elemTy", TSeqCtor);
-          
+          TSeqElemTy = getAccessor(tyDt, "elemTy", TSeqCtor);
+
           TMapCtor = tyDt.GetConstructor("TMap");
-          TMapKeyTy = GetAccessor(tyDt, "keyTy", TMapCtor);
-          TMapElemTy = GetAccessor(tyDt, "elemTy", TMapCtor);
+          TMapKeyTy = getAccessor(tyDt, "keyTy", TMapCtor);
+          TMapElemTy = getAccessor(tyDt, "elemTy", TMapCtor);
 
           TIMapCtor = tyDt.GetConstructor("TIMap");
-          TIMapKeyTy = GetAccessor(tyDt, "keyTy", TIMapCtor);
-          TIMapElemTy = GetAccessor(tyDt, "elemTy", TIMapCtor);
+          TIMapKeyTy = getAccessor(tyDt, "keyTy", TIMapCtor);
+          TIMapElemTy = getAccessor(tyDt, "elemTy", TIMapCtor);
 
           TClassCtor = tyDt.GetConstructor("TClass");
-          TClassTag = GetAccessor(tyDt, "tag", TClassCtor);
+          TClassTag = getAccessor(tyDt, "tag", TClassCtor);
         }
         // TODO: print error messages for missing ctors / accessors?
+      }
+
+      public class BoxDatatype {
+        public readonly Bpl.DatatypeConstructor BoxBoolCtor;
+        public readonly Bpl.DatatypeAccessor BoxBoolSel;
+
+        public readonly Bpl.DatatypeConstructor BoxCharCtor;
+        public readonly Bpl.DatatypeAccessor BoxCharSel;
+
+        public readonly Bpl.DatatypeConstructor BoxIntCtor;
+        public readonly Bpl.DatatypeAccessor BoxIntSel;
+
+        public readonly Bpl.DatatypeConstructor BoxRealCtor;
+        public readonly Bpl.DatatypeAccessor BoxRealSel;
+
+        public readonly Bpl.DatatypeConstructor BoxRefCtor;
+        public readonly Bpl.DatatypeAccessor BoxRefSel;
+
+        public readonly Bpl.DatatypeConstructor BoxDatatypeCtor;
+        public readonly Bpl.DatatypeAccessor BoxDatatypeSel;
+
+        public readonly IDictionary<int, Bpl.DatatypeConstructor> BitwidthToBoxBvCtor;
+        public readonly IDictionary<int, Bpl.DatatypeAccessor> BitwidthToBoxBvSel;
+        public BoxDatatype(Bpl.DatatypeTypeCtorDecl boxDt, IEnumerable<int> bitwidths) {
+          BitwidthToBoxBvCtor = new Dictionary<int, DatatypeConstructor>();
+          BitwidthToBoxBvSel = new Dictionary<int, DatatypeAccessor>();
+          foreach (var bitwidth in bitwidths) {
+            var ctorName = "BoxBv" + bitwidth;
+            var selName = "vBv" + bitwidth;
+            var selIdent = new TypedIdent(Bpl.Token.NoToken, selName, new BvType(bitwidth));
+            boxDt.AddConstructor(Bpl.Token.NoToken, ctorName, new List<TypedIdent>{ selIdent });
+            var ctor = boxDt.GetConstructor(ctorName);
+            BitwidthToBoxBvCtor.Add(bitwidth, ctor);
+            BitwidthToBoxBvSel.Add(bitwidth, getAccessor(boxDt, selName, ctor));
+          }
+
+          BoxBoolCtor = boxDt.GetConstructor("BoxBool");
+          BoxBoolSel = getAccessor(boxDt, "vBool", BoxBoolCtor);
+
+          BoxCharCtor = boxDt.GetConstructor("BoxChar");
+          BoxCharSel = getAccessor(boxDt, "vChar", BoxCharCtor);
+
+          BoxIntCtor = boxDt.GetConstructor("BoxInt");
+          BoxIntSel = getAccessor(boxDt, "vInt", BoxIntCtor);
+
+          BoxRealCtor = boxDt.GetConstructor("BoxReal");
+          BoxRealSel = getAccessor(boxDt, "vReal", BoxRealCtor);
+
+          BoxRefCtor = boxDt.GetConstructor("BoxRef");
+          BoxRefSel = getAccessor(boxDt, "vRef", BoxRefCtor);
+
+          BoxDatatypeCtor = boxDt.GetConstructor("BoxDatatype");
+          BoxDatatypeSel = getAccessor(boxDt, "vDatatype", BoxDatatypeCtor);
+        }
       }
     }
 
@@ -296,6 +351,7 @@ namespace Microsoft.Dafny {
       public readonly Bpl.Type CharType;
       public readonly Bpl.Type RefType;
       public readonly Bpl.Type BoxType;
+      public readonly PredefDatatypes.BoxDatatype BoxDatatype;
       public Bpl.Type BigOrdinalType {
         get { return BoxType; }
       }
@@ -428,7 +484,7 @@ namespace Microsoft.Dafny {
       }
 
       public PredefinedDecls(DafnyOptions options,
-                             Bpl.TypeCtorDecl charType, Bpl.TypeCtorDecl refType, Bpl.TypeCtorDecl boxType,
+                             Bpl.TypeCtorDecl charType, Bpl.TypeCtorDecl refType, Bpl.TypeCtorDecl boxType, PredefDatatypes.BoxDatatype boxDt,
                              Bpl.TypeSynonymDecl setTypeCtor, Bpl.TypeSynonymDecl isetTypeCtor, Bpl.TypeSynonymDecl multiSetTypeCtor,
                              Bpl.TypeCtorDecl mapTypeCtor, Bpl.TypeCtorDecl imapTypeCtor,
                              Bpl.Function arrayLength, Bpl.Function realFloor,
@@ -447,6 +503,7 @@ namespace Microsoft.Dafny {
         Contract.Requires(charType != null);
         Contract.Requires(refType != null);
         Contract.Requires(boxType != null);
+        Contract.Requires(!options.UseTyDt || boxDt != null);
         Contract.Requires(setTypeCtor != null);
         Contract.Requires(isetTypeCtor != null);
         Contract.Requires(multiSetTypeCtor != null);
@@ -487,6 +544,7 @@ namespace Microsoft.Dafny {
         Bpl.CtorType refT = new Bpl.CtorType(Token.NoToken, refType, new List<Bpl.Type>());
         this.RefType = refT;
         this.BoxType = new Bpl.CtorType(Token.NoToken, boxType, new List<Bpl.Type>());
+        this.BoxDatatype = boxDt;
         this.setTypeCtor = setTypeCtor;
         this.isetTypeCtor = isetTypeCtor;
         this.multiSetTypeCtor = multiSetTypeCtor;
@@ -530,7 +588,7 @@ namespace Microsoft.Dafny {
       }
     }
 
-    PredefinedDecls FindPredefinedDecls(Bpl.Program prog) {
+    PredefinedDecls FindPredefinedDecls(Bpl.Program prog, ISet<int> bitwidths) {
       Contract.Requires(prog != null);
       if (prog.Resolve(options) != 0) {
         options.OutputWriter.WriteLine("Error: resolution errors encountered in Dafny prelude");
@@ -574,6 +632,7 @@ namespace Microsoft.Dafny {
       Bpl.TypeCtorDecl layerType = null;
       Bpl.TypeCtorDecl dtCtorId = null;
       Bpl.TypeCtorDecl boxType = null;
+      PredefDatatypes.BoxDatatype boxDatatype = null;
       Bpl.TypeCtorDecl mapTypeCtor = null;
       Bpl.TypeCtorDecl imapTypeCtor = null;
       Bpl.GlobalVariable heap = null;
@@ -584,6 +643,12 @@ namespace Microsoft.Dafny {
           Bpl.DatatypeTypeCtorDecl dt = (Bpl.DatatypeTypeCtorDecl)d;
           tyType = dt;
           tyDatatype = new PredefDatatypes.TyDatatype(dt);
+        } else if (d is Bpl.DatatypeTypeCtorDecl && 
+                   ((Bpl.DatatypeTypeCtorDecl)d).Name == "Box") {
+          Bpl.DatatypeTypeCtorDecl dt = (Bpl.DatatypeTypeCtorDecl)d;
+          // dt is extended with further datatype constructors for bitvectors in PredefDatatypes.
+          boxDatatype = new PredefDatatypes.BoxDatatype(dt, bitwidths);
+          boxType = dt;
         } else if (d is Bpl.TypeCtorDecl) {
           Bpl.TypeCtorDecl dt = (Bpl.TypeCtorDecl)d;
           if (dt.Name == "Field") {
@@ -762,7 +827,7 @@ namespace Microsoft.Dafny {
       } else if (objectTypeConstructor == null) {
         options.OutputWriter.WriteLine("Error: Dafny prelude is missing declaration of objectTypeConstructor");
       } else {
-        return new PredefinedDecls(options, charType, refType, boxType,
+        return new PredefinedDecls(options, charType, refType, boxType, boxDatatype,
                                    setTypeCtor, isetTypeCtor, multiSetTypeCtor,
                                    mapTypeCtor, imapTypeCtor,
                                    arrayLength, realFloor,
@@ -785,8 +850,14 @@ namespace Microsoft.Dafny {
       var preludePath = "";
       string combinedPrelude;
       if (options.DafnyPrelude == null) {
+        var basePrelude = options.UseBoxDt
+          ? "DafnyPreludeBoxDt.bpl"
+          : options.UseTyDt
+            ? "DafnyPreludeTyDt.bpl"
+            : "DafnyPrelude.bpl";
+
         var theoryPreludes = new Dictionary<string, string> {
-          {"Base", options.UseTyDt ? "DafnyPreludeTyDt.bpl" : "DafnyPrelude.bpl"},
+          {"Base", basePrelude},
           { "Seq", options.UseSeqs ? (options.UseSeqTheory ? "DafnyPreludeSeqNative.bpl" : "DafnyPreludeSeqAxiom.bpl") : "" },
           { "Set", options.UseSets ? "DafnyPreludeSetAxiom.bpl" : "" },
           { "ISet", options.UseISets ? "DafnyPreludeISetAxiom.bpl" : "" },
@@ -1022,7 +1093,7 @@ namespace Microsoft.Dafny {
       Type.ResetScopes();
 
       foreach (ModuleDefinition outerModule in VerifiableModules(p)) {
-        var translator = new Translator(reporter, flags);
+        var translator = new Translator(reporter, p.SystemModuleManager.Bitwidths, flags);
 
         if (translator.sink == null || translator.sink == null) {
           // something went wrong during construction, which reads the prelude; an error has
