@@ -1293,13 +1293,17 @@ namespace Microsoft.Dafny {
       var tok = Bpl.Token.NoToken;
       var bvType = Bpl.Type.GetBvType(w);
       var attr = new Bpl.QKeyValue(tok, "identity", new List<object>(), null);
-      var bvVar = BplFormalVar(null, bvType, true, out var bvExpr);
+      var bvVar = BplFormalVar("x", bvType, true);
+      var resVar = BplFormalVar(null, bvType, true);
       var fun = new Bpl.Function(tok, "LitBv" + w, new List<TypeVariable>(), 
-        new List<Variable>() { bvVar }, bvVar, null, attr);
+        new List<Variable> { bvVar }, resVar, null, attr);
+      bitsToLitBvFunction.Add(w, fun);
 
       var boundVar = new Bpl.BoundVariable(tok, new Bpl.TypedIdent(tok, "x", BplBvType(w)));
       var boundVarExpr = new Bpl.IdentifierExpr(tok, boundVar, true);
-      var litFunApp = FunctionCall(tok, BuiltinFunction.LitBv, null, w, boundVarExpr);
+      var litFunApp = 
+        new Bpl.NAryExpr(tok, new Bpl.TypeCoercion(tok, BplBvType(w)),
+          new List<Expr>{ FunctionCall(tok, fun, boundVarExpr) });
 
       fun.DefinitionAxiom = new Axiom(tok,
         BplForall(tok, new List<TypeVariable>(), new List<Variable> { boundVar }, attr, BplTrigger(litFunApp),

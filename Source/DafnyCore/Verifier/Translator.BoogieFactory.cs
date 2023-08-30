@@ -158,6 +158,8 @@ namespace Microsoft.Dafny {
       AtLayer
     }
 
+    private Dictionary<int, Bpl.Function> bitsToLitBvFunction = new Dictionary<int, Bpl.Function>();
+
     Bpl.Expr Lit(Bpl.Expr expr, Bpl.Type typ) {
       Contract.Requires(expr != null);
       Contract.Requires(typ != null);
@@ -180,7 +182,7 @@ namespace Microsoft.Dafny {
                  (expr.ShallowType == null || expr.ShallowType.Equals(predef.BoxType))) {
         return FunctionCall(expr.tok, BuiltinFunction.LitBox, null, expr);
       } else if (typ is Bpl.BvType bvType) {
-        return FunctionCall(expr.tok, BuiltinFunction.LitBv, null, bvType.Bits, expr);
+        return FunctionCall(expr.tok, bitsToLitBvFunction[bvType.Bits], expr);
       } //else if (options.UseTyDt && expr.ShallowType != null && expr.ShallowType.IsMap) {
         // set is the only one with UseTyDt, and it is a map [Box]bool.
         //return expr;
@@ -205,10 +207,12 @@ namespace Microsoft.Dafny {
           case "LitRef":
           case "LitDatatypeType":
           case "LitHandleType":
-          case "LitBv":
           case "Lit":
             return app.Args[0];
           default:
+            if (app.Fun.FunctionName.StartsWith("LitBv")) {
+              return app.Args[0];
+            }
             break;
         }
       }
@@ -641,20 +645,6 @@ namespace Microsoft.Dafny {
           Contract.Assert(typeInstantiation != null);
           return FunctionCall(tok, "AtLayer", typeInstantiation, args);
 
-        default:
-          Contract.Assert(false); throw new cce.UnreachableException();  // unexpected built-in function
-      }
-    }
-
-    Bpl.Expr FunctionCall(Bpl.IToken tok, BuiltinFunction f, Bpl.Type typeInstantiation, int bitwidth = 0, params Bpl.Expr[] args) {
-      if (bitwidth == 0) {
-        return FunctionCall(tok, f, typeInstantiation, args);
-      }
-      switch (f) {
-        case BuiltinFunction.LitBv:
-          Contract.Assert(args.Length == 1);
-          Contract.Assert(bitwidth > 0);
-          return FunctionCall(tok, "LitBv" + bitwidth, Bpl.Type.GetBvType(bitwidth), args);
         default:
           Contract.Assert(false); throw new cce.UnreachableException();  // unexpected built-in function
       }
