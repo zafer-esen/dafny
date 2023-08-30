@@ -63,6 +63,8 @@ axiom (forall x: real :: { $Box(LitReal(x)) } $Box(LitReal(x)) == LitBox($Box(x)
 
 function {:identity} LitDatatypeType(x: DatatypeType): DatatypeType { x }
 axiom (forall x: DatatypeType :: { $Box(LitDatatypeType(x)) } $Box(LitDatatypeType(x)) == LitBox($Box(x)) );
+function {:identity} LitHandleType(x: HandleType): HandleType { x }
+axiom (forall x: HandleType :: { $Box(LitHandleType(x)) } $Box(LitHandleType(x)) == LitBox($Box(x)) );
 
 // LitBox is also used for ORDINAL
 function {:identity} LitBox(x: Box): Box { x }

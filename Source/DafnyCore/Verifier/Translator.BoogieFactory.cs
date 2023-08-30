@@ -1,8 +1,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.IO;
+using Dafny;
 using Bpl = Microsoft.Boogie;
 using static Microsoft.Dafny.Util;
 
@@ -51,7 +53,9 @@ namespace Microsoft.Dafny {
       LitReal,
       LitBool,
       LitDatatypeType,
+      LitHandleType,
       LitBox,
+      LitBv,
       LayerSucc,
       AsFuelBottom,
       CharFromInt,
@@ -170,10 +174,18 @@ namespace Microsoft.Dafny {
         return FunctionCall(expr.tok, BuiltinFunction.LitBool, null, expr);
       } else if (typ.Equals(predef.DatatypeType)) {
         return FunctionCall(expr.tok, BuiltinFunction.LitDatatypeType, null, expr);
+      } else if (typ.Equals(predef.HandleType)) {
+        return FunctionCall(expr.tok, BuiltinFunction.LitHandleType, null, expr);
       } else if (typ.Equals(predef.BoxType) && 
                  (expr.ShallowType == null || expr.ShallowType.Equals(predef.BoxType))) {
         return FunctionCall(expr.tok, BuiltinFunction.LitBox, null, expr);
-      } else {
+      } else if (typ is Bpl.BvType bvType) {
+        return FunctionCall(expr.tok, BuiltinFunction.LitBv, null, bvType.Bits, expr);
+      } //else if (options.UseTyDt && expr.ShallowType != null && expr.ShallowType.IsMap) {
+        // set is the only one with UseTyDt, and it is a map [Box]bool.
+        //return expr;
+      //} 
+    else {
         return FunctionCall(expr.tok, BuiltinFunction.Lit, typ, expr);
       }
     }
@@ -190,6 +202,10 @@ namespace Microsoft.Dafny {
           case "LitInt":
           case "LitReal":
           case "LitBox":
+          case "LitRef":
+          case "LitDatatypeType":
+          case "LitHandleType":
+          case "LitBv":
           case "Lit":
             return app.Args[0];
           default:
@@ -215,7 +231,7 @@ namespace Microsoft.Dafny {
       return GetLit(expr) ?? expr;
     }
 
-    readonly ISet<string> letBoundVariablesWithLitRHS = new HashSet<string>();
+    readonly System.Collections.Generic.ISet<string> letBoundVariablesWithLitRHS = new HashSet<string>();
 
     bool IsLit(Bpl.Expr expr) {
       if (expr is Bpl.IdentifierExpr ie) {
@@ -248,6 +264,10 @@ namespace Microsoft.Dafny {
           Contract.Assert(args.Length == 1);
           Contract.Assert(typeInstantiation == null);
           return FunctionCall(tok, "LitDatatypeType", predef.DatatypeType, args);
+        case BuiltinFunction.LitHandleType:
+          Contract.Assert(args.Length == 1);
+          Contract.Assert(typeInstantiation == null);
+          return FunctionCall(tok, "LitHandleType", predef.HandleType, args);
         case BuiltinFunction.LitBox:
           Contract.Assert(args.Length == 1);
           Contract.Assert(typeInstantiation == null);
@@ -626,6 +646,20 @@ namespace Microsoft.Dafny {
       }
     }
 
+    Bpl.Expr FunctionCall(Bpl.IToken tok, BuiltinFunction f, Bpl.Type typeInstantiation, int bitwidth = 0, params Bpl.Expr[] args) {
+      if (bitwidth == 0) {
+        return FunctionCall(tok, f, typeInstantiation, args);
+      }
+      switch (f) {
+        case BuiltinFunction.LitBv:
+          Contract.Assert(args.Length == 1);
+          Contract.Assert(bitwidth > 0);
+          return FunctionCall(tok, "LitBv" + bitwidth, Bpl.Type.GetBvType(bitwidth), args);
+        default:
+          Contract.Assert(false); throw new cce.UnreachableException();  // unexpected built-in function
+      }
+    }
+
     static Bpl.NAryExpr FunctionCall(Bpl.IToken tok, string function, Bpl.Type returnType, params Bpl.Expr[] args) {
       Contract.Requires(tok != null);
       Contract.Requires(function != null);
@@ -648,6 +682,19 @@ namespace Microsoft.Dafny {
         aa.Add(arg);
       }
       return new Bpl.NAryExpr(tok, new Bpl.FunctionCall(new Bpl.IdentifierExpr(tok, function, returnType)), aa);
+    }
+
+    static Bpl.NAryExpr FunctionCall(Bpl.IToken tok, Bpl.Function function, params Bpl.Expr[] args) {
+      Contract.Requires(tok != null);
+      Contract.Requires(function != null);
+      Contract.Requires(cce.NonNullElements(args));
+      Contract.Ensures(Contract.Result<Bpl.NAryExpr>() != null);
+
+      List<Bpl.Expr> aa = new List<Bpl.Expr>();
+      foreach (Bpl.Expr arg in args) {
+        aa.Add(arg);
+      }
+      return new Bpl.NAryExpr(tok, new Bpl.FunctionCall(function), aa);
     }
 
     public Bpl.Expr ProperSubset(Bpl.IToken tok, Bpl.Expr e0, Bpl.Expr e1) {

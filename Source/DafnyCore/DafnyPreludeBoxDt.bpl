@@ -52,17 +52,20 @@ function {:identity} Lit<T>(x: T): T { x }
 axiom (forall<T> x: T :: { $Box(Lit(x)) } $Box(Lit(x)) == Lit($Box(x)) );
 
 function {:identity} LitBool(x: bool): bool { x }
-axiom (forall x: bool :: { $Box(LitBool(x)) } $Box(LitBool(x)) == LitBox($Box(x)) );
+axiom (forall x: bool :: { BoxBool(LitBool(x)) } BoxBool(LitBool(x)) == LitBox(BoxBool(x)) );
 
 // LitInt is also used for char
 function {:identity} LitInt(x: int): int { x }
-axiom (forall x: int :: { $Box(LitInt(x)) } $Box(LitInt(x)) == LitBox($Box(x)) );
+axiom (forall x: int :: { BoxInt(LitInt(x)) } BoxInt(LitInt(x)) == LitBox(BoxInt(x)) );
 
 function {:identity} LitReal(x: real): real { x }
-axiom (forall x: real :: { $Box(LitReal(x)) } $Box(LitReal(x)) == LitBox($Box(x)) );
+axiom (forall x: real :: { BoxReal(LitReal(x)) } BoxReal(LitReal(x)) == LitBox(BoxReal(x)));
 
 function {:identity} LitDatatypeType(x: DatatypeType): DatatypeType { x }
-axiom (forall x: DatatypeType :: { $Box(LitDatatypeType(x)) } $Box(LitDatatypeType(x)) == LitBox($Box(x)) );
+axiom (forall x: DatatypeType :: { BoxDatatype(LitDatatypeType(x)) } BoxDatatype(LitDatatypeType(x)) == LitBox(BoxDatatype(x)) );
+
+function {:identity} LitHandleType(x: HandleType): HandleType { x }
+axiom (forall x: HandleType :: { BoxHandleType(LitHandleType(x)) } BoxHandleType(LitHandleType(x)) == LitBox(BoxHandleType(x)) );
 
 // LitBox is also used for ORDINAL
 function {:identity} LitBox(x: Box): Box { x }
@@ -124,7 +127,8 @@ datatype Box {
 	BoxInt(vInt: int),
 	BoxReal(vReal: real),
   BoxRef(vRef: ref),
-  BoxDatatype(vDatatype: DatatypeType)
+  BoxDatatype(vDatatype: DatatypeType),
+  BoxHandleType(vHandleType: HandleType)
   // Bitvectors are added programmatically.
 }
 const $ArbitraryBoxValue: Box;
@@ -146,6 +150,7 @@ axiom (forall x: real :: { $Box(x) } $Box(x) == BoxReal(x) && $Unbox($Box(x)) ==
 // axiom (forall x: IMap Box Box :: { $Box(x) } $Box(x) == BoxIMap(x) && $Unbox($Box(x)) == x);
 axiom (forall x: ref :: { $Box(x) } $Box(x) == BoxRef(x) && $Unbox($Box(x)) == x);
 axiom (forall x: DatatypeType :: { $Box(x) } $Box(x) == BoxDatatype(x) && $Unbox($Box(x)) == x);
+axiom (forall x: HandleType :: { $Box(x) } $Box(x) == BoxHandleType(x) && $Unbox($Box(x)) == x);
 
 // Corresponding entries for boxes...
 // This could probably be solved by having Box also inhabit Ty
