@@ -99,10 +99,11 @@ namespace Microsoft.Dafny {
       MapM(Bools, is_alloc => {
         var vars = MkTyParamBinders(GetTypeParams(c), out var tyexprs);
 
-        var o = BplBoundVar("$o", predef.RefType, vars);
+        var o = BplBoundVar("$o", options.UseBoxDt ? predef.BoxType : predef.RefType, vars);
+        var oValue = options.UseBoxDt ? ExtractBox(c.tok, o, predef.RefType) : o;
 
         Bpl.Expr body, is_o;
-        Bpl.Expr o_null = Bpl.Expr.Eq(o, predef.Null);
+        Bpl.Expr o_null = Bpl.Expr.Eq(oValue, predef.Null);
         Bpl.Expr o_ty = ClassTyCon(c, tyexprs);
         string name;
 
@@ -111,7 +112,7 @@ namespace Microsoft.Dafny {
           var h = BplBoundVar("$h", predef.HeapType, vars);
           // $IsAlloc(o, ..)
           is_o = MkIsAlloc(o, o_ty, h);
-          body = BplIff(is_o, BplOr(o_null, IsAlloced(c.tok, h, o)));
+          body = BplIff(is_o, BplOr(o_null, IsAlloced(c.tok, h, oValue)));
         } else {
           name = $"$Is axiom for {c.WhatKind} {c}";
           // $Is(o, ..)
@@ -122,15 +123,16 @@ namespace Microsoft.Dafny {
           } else if (c is TraitDecl) {
             //generating $o == null || implements$J(dtype(x), typeArgs)
             var t = (TraitDecl)c;
-            var dtypeFunc = FunctionCall(o.tok, BuiltinFunction.DynamicType, null, o);
+            var dtypeFunc = FunctionCall(o.tok, BuiltinFunction.DynamicType, null, oValue);
             var implementsJ_Arguments = new List<Expr> { dtypeFunc }; // TODO: also needs type parameters
             implementsJ_Arguments.AddRange(tyexprs);
             Bpl.Expr implementsFunc =
               FunctionCall(t.tok, "implements$" + t.FullSanitizedName, Bpl.Type.Bool, implementsJ_Arguments);
             rhs = BplOr(o_null, implementsFunc);
           } else {
-            rhs = BplOr(o_null, DType(o, o_ty));
+            rhs = BplOr(o_null, DType(oValue, o_ty));
           }
+          rhs = BplAnd(MkBoxIs(c.tok, o, predef.RefType), rhs);
 
           body = BplIff(is_o, rhs);
         }
@@ -312,7 +314,7 @@ namespace Microsoft.Dafny {
           bvsAllocationAxiom.Add(v);
         }
 
-        oDotF = ReadHeap(c.tok, h, o, GetArrayIndexFieldName(c.tok, ixs));
+        oDotF = ReadHeap(c.tok, h, o, GetArrayIndexFieldName(c.tok, ixs), Bpl.Type.Bool, true);
 
         for (int i = 0; i < ac.Dims; i++) {
           // 0 <= i && i < _System.array.Length(o)
@@ -323,7 +325,7 @@ namespace Microsoft.Dafny {
         }
       } else if (f.IsMutable) {
         // generate h[o,f]
-        oDotF = ReadHeap(c.tok, h, o, new Bpl.IdentifierExpr(c.tok, GetField(f)), TrType(f.Type));
+        oDotF = ReadHeap(c.tok, h, o, new Bpl.IdentifierExpr(c.tok, GetField(f)), TrType(f.Type), true);
         bvsTypeAxiom.Add(hVar);
         bvsTypeAxiom.Add(oVar);
         bvsAllocationAxiom.Add(hVar);
@@ -372,8 +374,9 @@ namespace Microsoft.Dafny {
         is_hf = MkIs(oDotF, tyexprs[0], true);
         isalloc_hf = MkIsAlloc(oDotF, tyexprs[0], h, true);
       } else {
-        is_hf = MkIs(oDotF, f.Type); // $Is(h[o, f], ..)
-        isalloc_hf = MkIsAlloc(oDotF, f.Type, h); // $IsAlloc(h[o, f], ..)
+        var boxed = ApplyBox(oDotF.tok, oDotF, TrType(f.Type));
+        is_hf = MkIs(boxed, f.Type); // $Is(h[o, f], ..)
+        isalloc_hf = MkIsAlloc(boxed, f.Type, h); // $IsAlloc(h[o, f], ..)
       }
 
       Bpl.Expr ax = BplForall(bvsTypeAxiom, tr, BplImp(ante, is_hf));
@@ -1359,13 +1362,14 @@ namespace Microsoft.Dafny {
       localVariables.Add(frame);
       // $_Frame := (lambda<alpha> $o: ref, $f: Field alpha :: $o != null && $Heap[$o,alloc] ==> ($o,$f) in Modifies/Reads-Clause);
       Boogie.TypeVariable alpha = new Boogie.TypeVariable(tok, "alpha");
+      var typeVariables = options.UseBoxDt ? new List<TypeVariable>() : new List<TypeVariable> { alpha };
       Boogie.BoundVariable oVar = new Boogie.BoundVariable(tok, new Boogie.TypedIdent(tok, "$o", predef.RefType));
       Boogie.IdentifierExpr o = new Boogie.IdentifierExpr(tok, oVar);
       Boogie.BoundVariable fVar = new Boogie.BoundVariable(tok, new Boogie.TypedIdent(tok, "$f", predef.FieldName(tok, alpha)));
       Boogie.IdentifierExpr f = new Boogie.IdentifierExpr(tok, fVar);
       Boogie.Expr ante = Boogie.Expr.And(Boogie.Expr.Neq(o, predef.Null), etran.IsAlloced(tok, o));
       Boogie.Expr consequent = InRWClause(tok, o, f, traitFrameExps, etran, null, null);
-      Boogie.Expr lambda = new Boogie.LambdaExpr(tok, new List<TypeVariable> { alpha }, new List<Variable> { oVar, fVar }, null,
+      Boogie.Expr lambda = new Boogie.LambdaExpr(tok, typeVariables, new List<Variable> { oVar, fVar }, null,
         Boogie.Expr.Imp(ante, consequent));
 
       //to initialize $_Frame variable to Frame'
@@ -1374,7 +1378,7 @@ namespace Microsoft.Dafny {
       // emit: assert (forall<alpha> o: ref, f: Field alpha :: o != null && $Heap[o,alloc] && (o,f) in subFrame ==> $_Frame[o,f]);
       Boogie.Expr oInCallee = InRWClause(tok, o, f, classFrameExps, etran, null, null);
       Boogie.Expr consequent2 = InRWClause(tok, o, f, traitFrameExps, etran, null, null);
-      Boogie.Expr q = new Boogie.ForallExpr(tok, new List<TypeVariable> { alpha }, new List<Variable> { oVar, fVar },
+      Boogie.Expr q = new Boogie.ForallExpr(tok, typeVariables, new List<Variable> { oVar, fVar },
         Boogie.Expr.Imp(Boogie.Expr.And(ante, oInCallee), consequent2));
       builder.Add(Assert(tok, q, new PODesc.TraitFrame(m.WhatKind, true), kv));
     }

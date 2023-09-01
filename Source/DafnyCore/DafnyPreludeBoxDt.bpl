@@ -48,8 +48,8 @@ axiom (forall a: Set, b: Set :: { Set#Equal(a,b) }  // extensionality axiom for 
 // ---------------------------------------------------------------
 // -- Literals ---------------------------------------------------
 // ---------------------------------------------------------------
-function {:identity} Lit<T>(x: T): T { x }
-axiom (forall<T> x: T :: { $Box(Lit(x)) } $Box(Lit(x)) == Lit($Box(x)) );
+// function {:identity} Lit<T>(x: T): T { x }
+// axiom (forall<T> x: T :: { $Box(Lit(x)) } $Box(Lit(x)) == Lit($Box(x)) );
 
 function {:identity} LitBool(x: bool): bool { x }
 axiom (forall x: bool :: { BoxBool(LitBool(x)) } BoxBool(LitBool(x)) == LitBox(BoxBool(x)) );
@@ -129,55 +129,12 @@ datatype Box {
   BoxRef(vRef: ref),
   BoxDatatype(vDatatype: DatatypeType),
   BoxHandleType(vHandleType: HandleType)
-  // Bitvectors are added programmatically.
+  // Bitvectors are added to this datatype programmatically.
 }
 const $ArbitraryBoxValue: Box;
 
-// Keeping $Box and $Unbox in the monomorphic encoding for now
-// but these should ideally be removed in the non-quantified mode.
-function $Box<T>(T): Box;
-function $Unbox<T>(Box): T;
 
-axiom (forall x: bool :: { $Box(x) } $Box(x) == BoxBool(x) && $Unbox($Box(x)) == x);
-axiom (forall x: char :: { $Box(x) } $Box(x) == BoxChar(x) && $Unbox($Box(x)) == x);
-axiom (forall x: int :: { $Box(x) } $Box(x) == BoxInt(x) && $Unbox($Box(x)) == x);
-axiom (forall x: real :: { $Box(x) } $Box(x) == BoxReal(x) && $Unbox($Box(x)) == x);
-// axiom (forall x: Map Box bool :: { $Box(x) } $Box(x) == BoxSet(x) && $Unbox($Box(x)) == x);
-// axiom (forall x: IMap Box bool :: { $Box(x) } $Box(x) == BoxISet(x) && $Unbox($Box(x)) == x);
-// axiom (forall x: Map Box int :: { $Box(x) } $Box(x) == BoxMultiSet(x) && $Unbox($Box(x)) == x);
-// axiom (forall x: Seq Box :: { $Box(x) } $Box(x) == BoxSeq(x) && $Unbox($Box(x)) == x);
-// axiom (forall x: Map Box Box :: { $Box(x) } $Box(x) == BoxMap(x) && $Unbox($Box(x)) == x);
-// axiom (forall x: IMap Box Box :: { $Box(x) } $Box(x) == BoxIMap(x) && $Unbox($Box(x)) == x);
-axiom (forall x: ref :: { $Box(x) } $Box(x) == BoxRef(x) && $Unbox($Box(x)) == x);
-axiom (forall x: DatatypeType :: { $Box(x) } $Box(x) == BoxDatatype(x) && $Unbox($Box(x)) == x);
-axiom (forall x: HandleType :: { $Box(x) } $Box(x) == BoxHandleType(x) && $Unbox($Box(x)) == x);
 
-// Corresponding entries for boxes...
-// This could probably be solved by having Box also inhabit Ty
-function $IsBox<T>(T,Ty): bool;
-function $IsAllocBox<T>(T,Ty,Heap): bool;
-
-axiom (forall bx : Box ::
-    { $IsBox(bx, TInt()) }
-    ( $IsBox(bx, TInt()) ==> bx is BoxInt && $Is(bx->vInt, TInt())));
-axiom (forall bx : Box ::
-    { $IsBox(bx, TReal()) }
-    ( $IsBox(bx, TReal()) ==> bx is BoxReal && $Is(bx->vReal, TReal()) ));
-axiom (forall bx : Box ::
-    { $IsBox(bx, TBool()) }
-    ( $IsBox(bx, TBool()) ==> bx is BoxBool && $Is(bx->vBool, TBool()) ));
-axiom (forall bx : Box ::
-    { $IsBox(bx, TChar()) }
-    ( $IsBox(bx, TChar()) ==> bx is BoxChar && $Is(bx->vChar, TChar()) ));
-
-// Since each bitvector type is a separate type in Boogie, the Box/Unbox axioms for bitvectors are
-// generated programmatically. Except, Bv0 is given here.
-axiom (forall bx : Box ::
-    { $IsBox(bx, TBitvector(0)) } // TODO: #Box review, assuming bv0 is int
-    ( $IsBox(bx, TBitvector(0)) ==> bx is BoxInt && $Is(bx->vInt, TBitvector(0))));
-axiom (forall<T> v : T, t : Ty ::
-    { $IsBox($Box(v), t) }
-    ( $IsBox($Box(v), t) <==> $Is(v,t) ));
 
 // ---------------------------------------------------------------
 // -- Is and IsAlloc ---------------------------------------------
@@ -185,36 +142,44 @@ axiom (forall<T> v : T, t : Ty ::
 
 // Type-argument to $Is is the /representation type/,
 // the second value argument to $Is is the actual type.
-function $Is<T>(T,Ty): bool;           // no heap for now
-axiom(forall v : int  :: { $Is(v,TInt()) }  $Is(v,TInt()));
-axiom(forall v : real :: { $Is(v,TReal()) } $Is(v,TReal()));
-axiom(forall v : bool :: { $Is(v,TBool()) } $Is(v,TBool()));
-axiom(forall v : char :: { $Is(v,TChar()) } $Is(v,TChar()));
-axiom(forall v : ORDINAL :: { $Is(v,TORDINAL()) } $Is(v,TORDINAL()));
+// TODO: add "v is Box<T>" as a second trigger?
+function $Is(Box,Ty): bool;           // no heap for now
+axiom(forall v : Box :: { $Is(v,TInt()) } v is BoxInt <==> $Is(v,TInt()));
+axiom(forall v : Box :: { $Is(v,TReal()) } v is BoxReal <==> $Is(v,TReal()));
+axiom(forall v : Box :: { $Is(v,TBool()) } v is BoxBool <==> $Is(v,TBool()));
+axiom(forall v : Box :: { $Is(v,TChar()) } v is BoxChar <==> $Is(v,TChar()));
+axiom(forall v : Box :: { $Is(v,TORDINAL()) } $Is(v,TORDINAL()));
+// TODO: Anything to add about these? They are Box ctors.
+  // BoxRef(vRef: ref),
+  // BoxDatatype(vDatatype: DatatypeType),
+  // BoxHandleType(vHandleType: HandleType)
+// TODO: Relate $Is to basic types? Is it ever used with basic types?
 
 // Since every bitvector type is a separate type in Boogie, the $Is/$IsAlloc axioms
 // for bitvectors are generated programatically. Except, TBitvector(0) is given here.
-axiom (forall v: Bv0 :: { $Is(v, TBitvector(0)) } $Is(v, TBitvector(0)));
+// axiom (forall v: Bv0 :: { $Is(v, TBitvector(0)) } $Is(v, TBitvector(0)));
+// TODO: add BV $Is axioms. Do we really need a special one for Bv0?
 
 #if USE_HEAP
-function $IsAlloc<T>(T,Ty,Heap): bool;
-axiom(forall h : Heap, v : int  :: { $IsAlloc(v,TInt(),h) }  $IsAlloc(v,TInt(),h));
-axiom(forall h : Heap, v : real :: { $IsAlloc(v,TReal(),h) } $IsAlloc(v,TReal(),h));
-axiom(forall h : Heap, v : bool :: { $IsAlloc(v,TBool(),h) } $IsAlloc(v,TBool(),h));
-axiom(forall h : Heap, v : char :: { $IsAlloc(v,TChar(),h) } $IsAlloc(v,TChar(),h));
-axiom(forall h : Heap, v : ORDINAL :: { $IsAlloc(v,TORDINAL(),h) } $IsAlloc(v,TORDINAL(),h));
-    
-axiom (forall v: Bv0, h: Heap :: { $IsAlloc(v, TBitvector(0), h) } $IsAlloc(v, TBitvector(0), h));
+function $IsAlloc(Box,Ty,Heap): bool;
+axiom(forall h : Heap, v : Box :: { $IsAlloc(v,TInt(),h) } v is BoxInt ==> $IsAlloc(v,TInt(),h));
+axiom(forall h : Heap, v : Box :: { $IsAlloc(v,TReal(),h) } v is BoxReal ==> $IsAlloc(v,TReal(),h));
+axiom(forall h : Heap, v : Box :: { $IsAlloc(v,TBool(),h) } v is BoxBool ==> $IsAlloc(v,TBool(),h));
+axiom(forall h : Heap, v : Box :: { $IsAlloc(v,TChar(),h) } v is BoxChar ==> $IsAlloc(v,TChar(),h));
+axiom(forall h : Heap, v : Box :: { $IsAlloc(v,TORDINAL(),h) } $IsAlloc(v,TORDINAL(),h));
+
+//axiom (forall v: Bv0, h: Heap :: { $IsAlloc(v, TBitvector(0), h) } $IsAlloc(v, TBitvector(0), h));
+// TODO: add BV $Is axioms. Do we really need a special one for Bv0?
 
 function $AlwaysAllocated(Ty): bool;
 axiom (forall ty: Ty :: { $AlwaysAllocated(ty) }
   $AlwaysAllocated(ty) ==>
-  (forall h: Heap, v: Box  :: { $IsAllocBox(v, ty, h) }  $IsBox(v, ty) ==> $IsAllocBox(v, ty, h)));
+  (forall h: Heap, v: Box  :: { $IsAlloc(v, ty, h) }  $Is(v, ty) ==> $IsAlloc(v, ty, h)));
 
 function $OlderTag(Heap): bool;
 #else
-function $IsAlloc<T>(T,Ty,Heap): bool { true } ;
-function $AlwaysAllocated(Ty): bool { true } ;
+function $IsAlloc(Box,Ty,Heap): bool { true }
+function $AlwaysAllocated(Ty): bool { true }
 function $OlderTag(Heap): bool;
 #endif
 
@@ -252,9 +217,11 @@ type HandleType;
 
 function SetRef_to_SetBox(s: [ref]bool): Set;
 axiom (forall s: [ref]bool, bx: Box :: { SetRef_to_SetBox(s)[bx] }
-  SetRef_to_SetBox(s)[bx] == s[$Unbox(bx): ref]);
-axiom (forall s: [ref]bool :: { SetRef_to_SetBox(s) }
-  $Is(SetRef_to_SetBox(s), TSet(Tclass._System.object?())));
+  bx is BoxRef && SetRef_to_SetBox(s)[bx] == s[bx->vRef: ref]);
+
+// TODO: deal with Set of Boxes
+//axiom (forall s: [ref]bool :: { SetRef_to_SetBox(s) }
+//  $Is(SetRef_to_SetBox(s), TSet(Tclass._System.object?())));
 
 // Functions ApplyN, RequiresN, and ReadsN are generated on demand by the translator,
 // but Apply1 is referred to in the prelude, so its definition is hardcoded here.
@@ -272,7 +239,7 @@ function DatatypeCtorId(DatatypeType): DtCtorId;
 function DtRank(DatatypeType): int;
 function BoxRank(Box): int;
 
-axiom (forall d: DatatypeType :: {BoxRank($Box(d))} BoxRank($Box(d)) == DtRank(d));
+axiom (forall d: DatatypeType :: {BoxRank(BoxDatatype(d))} BoxRank(BoxDatatype(d)) == DtRank(d));
 
 // ---------------------------------------------------------------
 // -- Big Ordinals -----------------------------------------------
@@ -381,49 +348,49 @@ const $LZ: LayerType;
 function $LS(LayerType): LayerType;
 function AsFuelBottom(LayerType) : LayerType;
 
-function AtLayer<A>([LayerType]A, LayerType): A;
-axiom (forall<A> f : [LayerType]A, ly : LayerType :: { AtLayer(f,ly) } AtLayer(f,ly) == f[ly]);
-axiom (forall<A> f : [LayerType]A, ly : LayerType :: { AtLayer(f,$LS(ly)) } AtLayer(f,$LS(ly)) == AtLayer(f,ly));
+function AtLayer([LayerType]HandleType, LayerType): HandleType;
+axiom (forall f : [LayerType]HandleType, ly : LayerType :: { AtLayer(f,ly) } AtLayer(f,ly) == f[ly]);
+axiom (forall f : [LayerType]HandleType, ly : LayerType :: { AtLayer(f,$LS(ly)) } AtLayer(f,$LS(ly)) == AtLayer(f,ly));
 
 // ---------------------------------------------------------------
 // -- Fields -----------------------------------------------------
 // ---------------------------------------------------------------
 
-type Field alpha;
+type Field = Box;
 
-function FDim<T>(Field T): int uses {
+function FDim(Field): int uses {
   #if USE_HEAP
   axiom FDim(alloc) == 0;
   #endif
 }
 
-function IndexField(int): Field Box;
+function IndexField(int): Field;
 axiom (forall i: int :: { IndexField(i) } FDim(IndexField(i)) == 1);
-function IndexField_Inverse<T>(Field T): int;
+function IndexField_Inverse(Field): int;
 axiom (forall i: int :: { IndexField(i) } IndexField_Inverse(IndexField(i)) == i);
 
-function MultiIndexField(Field Box, int): Field Box;
-axiom (forall f: Field Box, i: int :: { MultiIndexField(f,i) } FDim(MultiIndexField(f,i)) == FDim(f) + 1);
-function MultiIndexField_Inverse0<T>(Field T): Field T;
-function MultiIndexField_Inverse1<T>(Field T): int;
-axiom (forall f: Field Box, i: int :: { MultiIndexField(f,i) }
+function MultiIndexField(Field, int): Field;
+axiom (forall f: Field, i: int :: { MultiIndexField(f,i) } FDim(MultiIndexField(f,i)) == FDim(f) + 1);
+function MultiIndexField_Inverse0(Field): Field;
+function MultiIndexField_Inverse1(Field): int;
+axiom (forall f: Field, i: int :: { MultiIndexField(f,i) }
   MultiIndexField_Inverse0(MultiIndexField(f,i)) == f &&
   MultiIndexField_Inverse1(MultiIndexField(f,i)) == i);
 
-function DeclType<T>(Field T): ClassName;
+function DeclType(Field): ClassName;
 
 type NameFamily;
-function DeclName<T>(Field T): NameFamily uses {
+function DeclName(Field): NameFamily uses {
   #if USE_HEAP
   axiom DeclName(alloc) == allocName;
   #endif
 }
-function FieldOfDecl<alpha>(ClassName, NameFamily): Field alpha;
-axiom (forall<T> cl : ClassName, nm: NameFamily ::
-  {FieldOfDecl(cl, nm): Field T}
-  DeclType(FieldOfDecl(cl, nm): Field T) == cl && DeclName(FieldOfDecl(cl, nm): Field T) == nm);
+function FieldOfDecl(ClassName, NameFamily): Field;
+axiom (forall cl : ClassName, nm: NameFamily ::
+  {FieldOfDecl(cl, nm): Field}
+  DeclType(FieldOfDecl(cl, nm): Field) == cl && DeclName(FieldOfDecl(cl, nm): Field) == nm);
 
-function $IsGhostField<T>(Field T): bool uses {
+function $IsGhostField(Field): bool uses {
   #if USE_HEAP
   axiom $IsGhostField(alloc); // treat as ghost field, since it is allowed to be changed by ghost code
   #endif
@@ -432,7 +399,7 @@ function $IsGhostField<T>(Field T): bool uses {
 axiom (forall h: Heap, k: Heap :: { $HeapSuccGhost(h,k) }
   $HeapSuccGhost(h,k) ==>
     $HeapSucc(h,k) &&
-    (forall<alpha> o: ref, f: Field alpha :: { read(k, o, f) }
+    (forall o: ref, f: Field :: { read(k, o, f) }
       !$IsGhostField(f) ==> read(h, o, f) == read(k, o, f)));
 #endif
 // ---------------------------------------------------------------
@@ -441,17 +408,14 @@ axiom (forall h: Heap, k: Heap :: { $HeapSuccGhost(h,k) }
 
 #if USE_HEAP
 // $IsAlloc and $IsAllocBox are monotonic
-axiom (forall<T> h, k : Heap, v : T, t : Ty ::
+axiom (forall h, k : Heap, v : Box, t : Ty ::
   { $HeapSucc(h, k), $IsAlloc(v, t, h) }
   $HeapSucc(h, k) ==> $IsAlloc(v, t, h) ==> $IsAlloc(v, t, k));
-axiom (forall h, k : Heap, bx : Box, t : Ty ::
-  { $HeapSucc(h, k), $IsAllocBox(bx, t, h) }
-  $HeapSucc(h, k) ==> $IsAllocBox(bx, t, h) ==> $IsAllocBox(bx, t, k));
 #endif
 
 // No axioms for $Is and $IsBox since they don't talk about the heap.
 
-const unique alloc: Field bool;
+const unique alloc: Field;
 const unique allocName: NameFamily;
 
 // ---------------------------------------------------------------
@@ -476,9 +440,9 @@ function {:inline} _System.real.Floor(x: real): int { Int(x) }
 // ---------------------------------------------------------------
 // -- The heap ---------------------------------------------------
 // ---------------------------------------------------------------
-type Heap = [ref]<alpha>[Field alpha]Box;
-function {:inline} read<alpha>(H: Heap, r: ref, f: Field alpha) : alpha { $Unbox(H[r][f]) }
-function {:inline} update<alpha>(H:Heap, r:ref, f:Field alpha, v:alpha): Heap { H[r := H[r][f := $Box(v)]] }
+type Heap = [ref][Field]Box;
+function {:inline} read(H: Heap, r: ref, f: Field) : Box { H[r][f] }
+function {:inline} update(H:Heap, r:ref, f:Field, v:Box): Heap { H[r := H[r][f := v]] }
 
 function $IsGoodHeap(Heap): bool;
 function $IsHeapAnchor(Heap): bool;
@@ -492,13 +456,13 @@ const $OneHeap: Heap uses {
 }
 
 function $HeapSucc(Heap, Heap): bool;
-axiom (forall<alpha> h: Heap, r: ref, f: Field alpha, x: alpha :: { update(h, r, f, x) }
+axiom (forall h: Heap, r: ref, f: Field, x: Box :: { update(h, r, f, x) }
   $IsGoodHeap(update(h, r, f, x)) ==>
   $HeapSucc(h, update(h, r, f, x)));
 axiom (forall a,b,c: Heap :: { $HeapSucc(a,b), $HeapSucc(b,c) }
   a != c ==> $HeapSucc(a,b) && $HeapSucc(b,c) ==> $HeapSucc(a,c));
 axiom (forall h: Heap, k: Heap :: { $HeapSucc(h,k) }
-  $HeapSucc(h,k) ==> (forall o: ref :: { read(k, o, alloc) } read(h, o, alloc) ==> read(k, o, alloc)));
+  $HeapSucc(h,k) ==> (forall o: ref :: { read(k, o, alloc) } read(h, o, alloc)->vBool ==> read(k, o, alloc)->vBool));
 
 function $HeapSuccGhost(Heap, Heap): bool;
 
@@ -509,35 +473,35 @@ function $HeapSuccGhost(Heap, Heap): bool;
 // havoc everything in $Heap, except {this}+rds+nw
 procedure $YieldHavoc(this: ref, rds: Set, nw: Set);
   modifies $Heap;
-  ensures (forall<alpha> $o: ref, $f: Field alpha :: { read($Heap, $o, $f) }
-            $o != null && read(old($Heap), $o, alloc) ==>
-            $o == this || rds[$Box($o)] || nw[$Box($o)] ==>
+  ensures (forall $o: ref, $f: Field :: { read($Heap, $o, $f) }
+            $o != null && read(old($Heap), $o, alloc)->vBool ==>
+            $o == this || rds[BoxRef($o)] || nw[BoxRef($o)] ==>
               read($Heap, $o, $f) == read(old($Heap), $o, $f));
   ensures $HeapSucc(old($Heap), $Heap);
 
 // havoc everything in $Heap, except rds-modi-{this}
 procedure $IterHavoc0(this: ref, rds: Set, modi: Set);
   modifies $Heap;
-  ensures (forall<alpha> $o: ref, $f: Field alpha :: { read($Heap, $o, $f) }
-            $o != null && read(old($Heap), $o, alloc) ==>
-            rds[$Box($o)] && !modi[$Box($o)] && $o != this ==>
+  ensures (forall $o: ref, $f: Field :: { read($Heap, $o, $f) }
+            $o != null && read(old($Heap), $o, alloc)->vBool ==>
+            rds[BoxRef($o)] && !modi[BoxRef($o)] && $o != this ==>
               read($Heap, $o, $f) == read(old($Heap), $o, $f));
   ensures $HeapSucc(old($Heap), $Heap);
 
 // havoc $Heap at {this}+modi+nw
 procedure $IterHavoc1(this: ref, modi: Set, nw: Set);
   modifies $Heap;
-  ensures (forall<alpha> $o: ref, $f: Field alpha :: { read($Heap, $o, $f) }
-            $o != null && read(old($Heap), $o, alloc) ==>
+  ensures (forall $o: ref, $f: Field :: { read($Heap, $o, $f) }
+            $o != null && read(old($Heap), $o, alloc)->vBool ==>
               read($Heap, $o, $f) == read(old($Heap), $o, $f) ||
-              $o == this || modi[$Box($o)] || nw[$Box($o)]);
+              $o == this || modi[BoxRef($o)] || nw[BoxRef($o)]);
   ensures $HeapSucc(old($Heap), $Heap);
 
-procedure $IterCollectNewObjects(prevHeap: Heap, newHeap: Heap, this: ref, NW: Field Set)
-                        returns (s: Set);
-  ensures (forall bx: Box :: { s[bx] } s[bx] <==>
-              (read(newHeap, this, NW) : Set)[bx] ||
-              ($Unbox(bx) != null && !read(prevHeap, $Unbox(bx):ref, alloc) && read(newHeap, $Unbox(bx):ref, alloc)));
+// procedure $IterCollectNewObjects(prevHeap: Heap, newHeap: Heap, this: ref, NW: Field Set)
+//                         returns (s: Set);
+//   ensures (forall bx: Box :: { s[bx] } s[bx] <==>
+//               (read(newHeap, this, NW) : Set)[bx] ||
+//               ($Unbox(bx) != null && !read(prevHeap, $Unbox(bx):ref, alloc) && read(newHeap, $Unbox(bx):ref, alloc)));
 #else
 
 // !USE_HEAP

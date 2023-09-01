@@ -1323,7 +1323,7 @@ namespace Microsoft.Dafny {
       xAnte = BplAnd(xAnte, prevEtran.TrExpr(range));
       var g = prevEtran.TrExpr(rhs);
       GetObjFieldDetails(lhs, prevEtran, out var obj, out var field);
-      var xHeapOF = ReadHeap(tok, etran.HeapExpr, obj, field);
+      var xHeapOF = ReadHeap(tok, etran.HeapExpr, obj, field, field.Type); // TODO: field.Type is absolutely wrong here
 
       Type lhsType = lhs is MemberSelectExpr ? ((MemberSelectExpr)lhs).Type : null;
 

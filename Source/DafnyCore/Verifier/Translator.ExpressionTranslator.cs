@@ -231,7 +231,11 @@ namespace Microsoft.Dafny {
 
         Boogie.TypeVariable alpha = new Boogie.TypeVariable(tok, "beta");
         Boogie.Type fieldAlpha = predef.FieldName(tok, alpha);
-        Boogie.Type ty = new Boogie.MapType(tok, new List<TypeVariable> { alpha }, new List<Boogie.Type> { predef.RefType, fieldAlpha }, Boogie.Type.Bool);
+        var typeVariables = new List<TypeVariable>();
+        if (!options.UseBoxDt) {
+          typeVariables.Add(alpha);
+        }
+        Boogie.Type ty = new Boogie.MapType(tok, typeVariables, new List<Boogie.Type> { predef.RefType, fieldAlpha }, Boogie.Type.Bool);
         return new Boogie.IdentifierExpr(tok, this.modifiesFrame, ty);
       }
 
@@ -242,7 +246,7 @@ namespace Microsoft.Dafny {
       public Boogie.Expr ArbitraryValue(Type type) {
         Contract.Ensures(Contract.Result<Boogie.Expr>() != null);
         var bx = ArbitraryBoxValue();
-        if (!ModeledAsBoxType(type)) {
+        if (!translator.ModeledAsBoxType(type)) {
           return translator.FunctionCall(Token.NoToken, BuiltinFunction.Unbox, translator.TrType(type), bx);
         } else {
           return bx;
@@ -459,7 +463,7 @@ namespace Microsoft.Dafny {
                     Boogie.Expr obj = TrExpr(e.Obj);
                     Boogie.Expr result;
                     if (field.IsMutable) {
-                      result = ReadHeap(GetToken(expr), HeapExpr, obj, new Boogie.IdentifierExpr(GetToken(expr), translator.GetField(field)), fType);
+                      result = translator.ReadHeap(GetToken(expr), HeapExpr, obj, new Boogie.IdentifierExpr(GetToken(expr), translator.GetField(field)), fType);
                       return translator.CondApplyUnbox(GetToken(expr), result, field.Type, expr.Type);
                     } else {
                       result = new Boogie.NAryExpr(GetToken(expr), new Boogie.FunctionCall(translator.GetReadonlyField(field)),
@@ -525,7 +529,7 @@ namespace Microsoft.Dafny {
                 Boogie.Expr x;
                 if (seqType.IsArrayType) {
                   Boogie.Expr fieldName = translator.FunctionCall(GetToken(selectExpr), BuiltinFunction.IndexField, null, e0);
-                  x = ReadHeap(GetToken(selectExpr), HeapExpr, TrExpr(e.Seq), fieldName);
+                  x = translator.ReadHeap(GetToken(selectExpr), HeapExpr, TrExpr(e.Seq), fieldName, elmtType); // todo: elmtType might be wrong
                 } else if (seqType is SeqType) {
                   x = translator.FunctionCall(GetToken(selectExpr), BuiltinFunction.SeqIndex, predef.BoxType, seq, e0);
                 } else if (seqType is MapType) {
@@ -536,7 +540,7 @@ namespace Microsoft.Dafny {
                 } else if (seqType is MultiSetType) {
                   x = Boogie.Expr.SelectTok(GetToken(selectExpr), TrExpr(e.Seq), BoxIfNecessary(GetToken(selectExpr), e0, domainType));
                 } else { Contract.Assert(false); x = null; }
-                if (!ModeledAsBoxType(elmtType) && !(seqType is MultiSetType)) {
+                if (!translator.ModeledAsBoxType(elmtType) && !(seqType is MultiSetType)) {
                   x = translator.FunctionCall(GetToken(selectExpr), BuiltinFunction.Unbox, elType, x);
                 }
                 return x;
@@ -592,8 +596,8 @@ namespace Microsoft.Dafny {
               Boogie.Type elType = translator.TrType(elmtType);
 
               Boogie.Expr fieldName = GetArrayIndexFieldName(GetToken(selectExpr), e.Indices);
-              Boogie.Expr x = ReadHeap(GetToken(selectExpr), HeapExpr, TrExpr(e.Array), fieldName);
-              if (!ModeledAsBoxType(elmtType)) {
+              Boogie.Expr x = translator.ReadHeap(GetToken(selectExpr), HeapExpr, TrExpr(e.Array), fieldName, elType); // TODO: elType might be wrong
+              if (!translator.ModeledAsBoxType(elmtType)) {
                 x = translator.FunctionCall(GetToken(selectExpr), BuiltinFunction.Unbox, elType, x);
               }
               return x;
@@ -627,7 +631,7 @@ namespace Microsoft.Dafny {
                 Concat(Map(tt.TypeArgs, translator.TypeToTy),
                   Cons(HeapExpr, Cons(TrExpr(e.Function), e.Args.ConvertAll(arg => TrArg(arg))))));
 
-              return translator.UnboxIfBoxed(applied, tt.Result);
+              return translator.UnboxUnlessInherentlyBoxed(applied, tt.Result);
             }
           case FunctionCallExpr callExpr: {
               FunctionCallExpr e = callExpr;
@@ -854,10 +858,10 @@ namespace Microsoft.Dafny {
 
                 case BinaryExpr.ResolvedOpcode.EqCommon:
                   keepLits = true;
-                  if (ModeledAsBoxType(e.E0.Type)) {
+                  if (translator.ModeledAsBoxType(e.E0.Type)) {
                     e1 = BoxIfNecessary(expr.tok, e1, e.E1.Type);
                     oe1 = BoxIfNecessary(expr.tok, oe1, e.E1.Type);
-                  } else if (ModeledAsBoxType(e.E1.Type)) {
+                  } else if (translator.ModeledAsBoxType(e.E1.Type)) {
                     e0 = BoxIfNecessary(expr.tok, e0, e.E0.Type);
                     oe0 = BoxIfNecessary(expr.tok, oe0, e.E0.Type);
                   }
@@ -873,10 +877,10 @@ namespace Microsoft.Dafny {
                   typ = Boogie.Type.Bool;
                   bOpcode = BinaryOperator.Opcode.Eq; break;
                 case BinaryExpr.ResolvedOpcode.NeqCommon:
-                  if (ModeledAsBoxType(e.E0.Type)) {
+                  if (translator.ModeledAsBoxType(e.E0.Type)) {
                     e1 = BoxIfNecessary(expr.tok, e1, e.E1.Type);
                     oe1 = BoxIfNecessary(expr.tok, oe1, e.E1.Type);
-                  } else if (ModeledAsBoxType(e.E1.Type)) {
+                  } else if (translator.ModeledAsBoxType(e.E1.Type)) {
                     e0 = BoxIfNecessary(expr.tok, e0, e.E0.Type);
                     oe0 = BoxIfNecessary(expr.tok, oe0, e.E0.Type);
                   }
@@ -1308,7 +1312,7 @@ namespace Microsoft.Dafny {
                   var isAlloc = translator.MkIsAllocBox(new Boogie.IdentifierExpr(GetToken(comprehension), yVar), bv.Type, HeapExpr);
                   typeAntecedent = BplAnd(typeAntecedent, isAlloc);
                 }
-                var yUnboxed = translator.UnboxIfBoxed(new Boogie.IdentifierExpr(GetToken(comprehension), yVar), bv.Type);
+                var yUnboxed = translator.UnboxUnlessInherentlyBoxed(new Boogie.IdentifierExpr(GetToken(comprehension), yVar), bv.Type);
                 var range = Translator.Substitute(e.Range, bv, new BoogieWrapper(yUnboxed, bv.Type));
                 lbody = BplAnd(typeAntecedent, TrExpr(range));
               } else {
@@ -1351,7 +1355,7 @@ namespace Microsoft.Dafny {
               if (!e.IsGeneralMapComprehension) {
                 var bv = e.BoundVars[0];
                 var w = new Boogie.IdentifierExpr(GetToken(comprehension), wVar);
-                Boogie.Expr unboxw = translator.UnboxIfBoxed(w, bv.Type);
+                Boogie.Expr unboxw = translator.UnboxUnlessInherentlyBoxed(w, bv.Type);
                 Boogie.Expr typeAntecedent = translator.MkIsBox(w, bv.Type);
                 if (freeOfAlloc != null && !freeOfAlloc[0]) {
                   var isAlloc = translator.MkIsAllocBox(w, bv.Type, HeapExpr);
@@ -1367,7 +1371,7 @@ namespace Microsoft.Dafny {
               } else {
                 var t = e.TermLeft;
                 var w = new Boogie.IdentifierExpr(GetToken(comprehension), wVar);
-                Boogie.Expr unboxw = translator.UnboxIfBoxed(w, t.Type);
+                Boogie.Expr unboxw = translator.UnboxUnlessInherentlyBoxed(w, t.Type);
                 Boogie.Expr typeAntecedent = translator.MkIsBox(w, t.Type);
                 if (freeOfAlloc != null && !freeOfAlloc[0]) {
                   var isAlloc = translator.MkIsAllocBox(w, t.Type, HeapExpr);
@@ -1480,7 +1484,7 @@ namespace Microsoft.Dafny {
                    select
 BplBoundVar(varNameGen.FreshId(string.Format("#{0}#", bv.Name)), predef.BoxType, bvars)).ToList();
         var subst = e.BoundVars.Zip(ves, (bv, ve) => {
-          var unboxy = translator.UnboxIfBoxed(ve, bv.Type);
+          var unboxy = translator.UnboxUnlessInherentlyBoxed(ve, bv.Type);
           return new KeyValuePair<IVariable, Expression>(bv, new BoogieWrapper(unboxy, bv.Type));
         }).ToDictionary(x => x.Key, x => x.Value);
         var su = new Substituter(null, subst, new Dictionary<TypeParameter, Type>());
