@@ -186,7 +186,7 @@ namespace Microsoft.Dafny {
       } //else if (options.UseTyDt && expr.ShallowType != null && expr.ShallowType.IsMap) {
         // set is the only one with UseTyDt, and it is a map [Box]bool.
         //return expr;
-      //} 
+      //}
     else {
         return FunctionCall(expr.tok, BuiltinFunction.Lit, typ, expr);
       }
