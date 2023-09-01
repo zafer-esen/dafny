@@ -7687,8 +7687,10 @@ namespace Microsoft.Dafny {
     /// options.UseBoxDt = true.
     /// </summary>
     public Bpl.Expr MkBoxIs(Bpl.IToken tok, Bpl.Expr boxExpr, Bpl.Type type) {
-      return PredefDatatypes.MkIsConstructor(tok, boxExpr, predef.BoxDatatype.Dt,
-        predef.BoxDatatype.ConstructorToIndex[predef.GetBoxConstructor(type)]);
+      return options.UseBoxDt
+        ? PredefDatatypes.MkIsConstructor(tok, boxExpr, predef.BoxDatatype.Dt,
+          predef.BoxDatatype.ConstructorToIndex[predef.GetBoxConstructor(type)])
+        : Bpl.Expr.True;
     }
 
     /// <summary>

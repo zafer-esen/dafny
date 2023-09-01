@@ -314,7 +314,7 @@ namespace Microsoft.Dafny {
           bvsAllocationAxiom.Add(v);
         }
 
-        oDotF = ReadHeap(c.tok, h, o, GetArrayIndexFieldName(c.tok, ixs), Bpl.Type.Bool, true);
+        oDotF = ReadHeap(c.tok, h, o, GetArrayIndexFieldName(c.tok, ixs), predef.BoxType, true);
 
         for (int i = 0; i < ac.Dims; i++) {
           // 0 <= i && i < _System.array.Length(o)
