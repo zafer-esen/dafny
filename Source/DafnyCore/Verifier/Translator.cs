@@ -1371,9 +1371,9 @@ namespace Microsoft.Dafny {
         new Bpl.NAryExpr(tok, new Bpl.TypeCoercion(tok, BplBvType(w)),
           new List<Expr>{ FunctionCall(tok, fun, boundVarExpr) });
 
-      fun.DefinitionAxiom = new Axiom(tok,
+      sink.AddTopLevelDeclaration(new Axiom(tok,
         BplForall(tok, new List<TypeVariable>(), new List<Variable> { boundVar }, attr, BplTrigger(litFunApp),
-          Bpl.Expr.Eq(litFunApp, boundVarExpr)));
+          Bpl.Expr.Eq(litFunApp, boundVarExpr))));
       sink.AddTopLevelDeclaration(fun);
 
       if (!options.UseBoxDt) {
