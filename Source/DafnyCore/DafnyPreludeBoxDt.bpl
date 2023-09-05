@@ -25,6 +25,12 @@ datatype Ty {
   TReal(),
   TORDINAL(),
   TBitvector(len: int),
+  TSet(elemTy: Ty),
+  TISet(elemTy: Ty),
+  TMultiSet(elemTy: Ty),
+  TSeq(elemTy: Ty),
+  TMap(keyTy: Ty, elemTy: Ty),
+  TIMap(keyTy: Ty, elemTy: Ty),
   TClass(tag: ClassTag)
 }
 
@@ -48,9 +54,11 @@ axiom (forall a: Set, b: Set :: { Set#Equal(a,b) }  // extensionality axiom for 
 function {:identity} LitBool(x: bool): bool { x }
 axiom (forall x: bool :: { BoxBool(LitBool(x)) } BoxBool(LitBool(x)) == LitBox(BoxBool(x)) );
 
-// LitInt is also used for char
 function {:identity} LitInt(x: int): int { x }
 axiom (forall x: int :: { BoxInt(LitInt(x)) } BoxInt(LitInt(x)) == LitBox(BoxInt(x)) );
+
+function {:identity} LitChar(x: char): char { x }
+axiom (forall x: char :: { BoxChar(LitChar(x)) } BoxChar(LitChar(x)) == LitBox(BoxChar(x)) );
 
 function {:identity} LitReal(x: real): real { x }
 axiom (forall x: real :: { BoxReal(LitReal(x)) } BoxReal(LitReal(x)) == LitBox(BoxReal(x)));
@@ -60,6 +68,9 @@ axiom (forall x: DatatypeType :: { BoxDatatype(LitDatatypeType(x)) } BoxDatatype
 
 function {:identity} LitHandleType(x: HandleType): HandleType { x }
 axiom (forall x: HandleType :: { BoxHandleType(LitHandleType(x)) } BoxHandleType(LitHandleType(x)) == LitBox(BoxHandleType(x)) );
+
+function {:identity} LitRef(x: ref): ref { x }
+axiom (forall x: ref :: { BoxRef(LitRef(x)) } BoxRef(LitRef(x)) == LitBox(BoxRef(x)) );
 
 // LitBox is also used for ORDINAL
 function {:identity} LitBox(x: Box): Box { x }

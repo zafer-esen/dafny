@@ -1,71 +1,3 @@
-// Dafny prelude
-// Created 9 February 2008 by Rustan Leino.
-// Converted to Boogie 2 on 28 June 2008.
-// Edited sequence axioms 20 October 2009 by Alex Summers.
-// Modified 2014 by Dan Rosen.
-// Copyright (c) 2008-2014, Microsoft.
-// Copyright by the contributors to the Dafny Project
-// SPDX-License-Identifier: MIT
-
-function TSeq(Ty) : Ty;
-axiom (forall t: Ty :: { TSeq(t) } Inv0_TSeq(TSeq(t)) == t);
-axiom (forall t: Ty :: { TSeq(t) } Tag(TSeq(t)) == TagSeq);
-
-function Inv0_TSeq(Ty) : Ty;
-
-// -- Type Tags --
-
-const unique TagSeq      : TyTag;
-
-// ---------------------------------------------------------------
-// -- Literals ---------------------------------------------------
-// ---------------------------------------------------------------
-
-// Specialize Lit to Seq?
-
-// ---------------------------------------------------------------
-// -- Boxing and unboxing ----------------------------------------
-// ---------------------------------------------------------------
-
-// Specialize Box-related functions for Seq?
-
-// function $Box<T>(T): Box;
-// function $Unbox<T>(Box): T;
-// axiom (forall<T> x : T :: { $Box(x) } $Unbox($Box(x)) == x);
-
-// function $IsBox<T>(T,Ty): bool;
-// function $IsAllocBox<T>(T,Ty,Heap): bool;
-
-axiom (forall bx : Box, t : Ty ::
-    { $IsBox(bx, TSeq(t)) }
-    ( $IsBox(bx, TSeq(t)) ==> $Box($Unbox(bx) : Seq) == bx && $Is($Unbox(bx) : Seq, TSeq(t))));
-
-// ---------------------------------------------------------------
-// -- Is and IsAlloc ---------------------------------------------
-// ---------------------------------------------------------------
-
-// Type-argument to $Is is the /representation type/,
-// the second value argument to $Is is the actual type.
-
-// Specialize $Is to Seq?
-// function $Is<T>(T,Ty): bool;           // no heap for now
-
-axiom (forall v: Seq, t0: Ty :: { $Is(v, TSeq(t0)) }
-  $Is(v, TSeq(t0)) <==>
-  (forall i : int :: { Seq#Index(v, i) }
-    0 <= i && i < Seq#Length(v) ==>
-    $IsBox(Seq#Index(v, i), t0)));
-
-#if USE_HEAP
-// Specialize $IsAlloc to Seq?
-//function $IsAlloc<T>(T,Ty,Heap): bool;
-axiom (forall v: Seq, t0: Ty, h: Heap :: { $IsAlloc(v, TSeq(t0), h) }
-  $IsAlloc(v, TSeq(t0), h) <==>
-  (forall i : int :: { Seq#Index(v, i) }
-    0 <= i && i < Seq#Length(v) ==>
-	$IsAllocBox(Seq#Index(v, i), t0, h)));
-#endif
-
 // ---------------------------------------------------------------
 // -- Axiomatization of sequences --------------------------------
 // ---------------------------------------------------------------
@@ -73,7 +5,6 @@ axiom (forall v: Seq, t0: Ty, h: Heap :: { $IsAlloc(v, TSeq(t0), h) }
 type Seq;
 
 function {:identity} LitSeq(x: Seq): Seq { x }
-axiom (forall x: Seq :: { $Box(LitSeq(x)) } $Box(LitSeq(x)) == LitBox($Box(x)) );
 
 function Seq#Length(Seq): int;
 axiom (forall s: Seq :: { Seq#Length(s) } 0 <= Seq#Length(s));
@@ -113,8 +44,8 @@ axiom (forall s: Seq, i: int, v: Box :: { Seq#Index(Seq#Build(s,v), i) }
   (i != Seq#Length(s) ==> Seq#Index(Seq#Build(s,v), i) == Seq#Index(s, i)));
 
 // Build preserves $Is
-axiom (forall s: Seq, bx: Box, t: Ty :: { $Is(Seq#Build(s,bx),TSeq(t)) }
-    $Is(s,TSeq(t)) && $IsBox(bx,t) ==> $Is(Seq#Build(s,bx),TSeq(t)));
+// axiom (forall s: Seq, bx: Box, t: Ty :: { $Is(Seq#Build(s,bx),TSeq(t)) }
+//     $Is(s,TSeq(t)) ==> $Is(Seq#Build(s,bx),TSeq(t)));
 
 #if USE_HEAP
 function Seq#Create(ty: Ty, heap: Heap, len: int, init: HandleType): Seq;
@@ -125,7 +56,7 @@ axiom (forall ty: Ty, heap: Heap, len: int, init: HandleType ::
 axiom (forall ty: Ty, heap: Heap, len: int, init: HandleType, i: int ::
   { Seq#Index(Seq#Create(ty, heap, len, init), i) }
   $IsGoodHeap(heap) && 0 <= i && i < len ==>
-  Seq#Index(Seq#Create(ty, heap, len, init), i) == Apply1(TInt, ty, heap, init, $Box(i)));
+  Seq#Index(Seq#Create(ty, heap, len, init), i) == Apply1(TInt(), ty, heap, init, BoxInt(i)));
 #endif
 
 function Seq#Append(Seq, Seq): Seq;
@@ -265,7 +196,7 @@ axiom (forall s: Seq, i: int, v: Box, n: int ::
 // Extension axiom, triggers only on Takes from arrays.
 axiom (forall h: Heap, a: ref, n0, n1: int ::
         { Seq#Take(Seq#FromArray(h, a), n0), Seq#Take(Seq#FromArray(h, a), n1) }
-        n0 + 1 == n1 && 0 <= n0 && n1 <= _System.array.Length(a) ==> Seq#Take(Seq#FromArray(h, a), n1) == Seq#Build(Seq#Take(Seq#FromArray(h, a), n0), read(h, a, IndexField(n0): Field Box)) );
+        n0 + 1 == n1 && 0 <= n0 && n1 <= _System.array.Length(a) ==> Seq#Take(Seq#FromArray(h, a), n1) == Seq#Build(Seq#Take(Seq#FromArray(h, a), n0), read(h, a, IndexField(n0): Field)) );
 #endif
 // drop commutes with build.
 axiom (forall s: Seq, v: Box, n: int ::
@@ -274,8 +205,8 @@ axiom (forall s: Seq, v: Box, n: int ::
 
 function Seq#Rank(Seq): int;
 axiom (forall s: Seq, i: int ::
-        { DtRank($Unbox(Seq#Index(s, i)): DatatypeType) }
-        0 <= i && i < Seq#Length(s) ==> DtRank($Unbox(Seq#Index(s, i)): DatatypeType) < Seq#Rank(s) );
+        { DtRank((Seq#Index(s, i))->vDatatype) }
+        0 <= i && i < Seq#Length(s) ==> DtRank((Seq#Index(s, i))->vDatatype) < Seq#Rank(s) );
 axiom (forall s: Seq, i: int ::
         { Seq#Rank(Seq#Drop(s, i)) }
         0 < i && i <= Seq#Length(s) ==> Seq#Rank(Seq#Drop(s, i)) < Seq#Rank(s) );

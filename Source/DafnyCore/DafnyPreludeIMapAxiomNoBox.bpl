@@ -1,45 +1,3 @@
-#if !TY_DATATYPE
-function TIMap(Ty, Ty) : Ty;
-axiom (forall t, u: Ty :: { TIMap(t,u) } Inv0_TIMap(TIMap(t,u)) == t);
-axiom (forall t, u: Ty :: { TIMap(t,u) } Inv1_TIMap(TIMap(t,u)) == u);
-axiom (forall t, u: Ty :: { TIMap(t,u) } Tag(TIMap(t,u)) == TagIMap);
-
-function Inv0_TIMap(Ty) : Ty;
-function Inv1_TIMap(Ty) : Ty;
-
-const unique TagIMap     : TyTag;
-#endif
-
-axiom (forall bx : Box, s : Ty, t : Ty ::
-    { $IsBox(bx, TIMap(s, t)) }
-    ( $IsBox(bx, TIMap(s, t)) ==> $Box($Unbox(bx) : IMap) == bx && $Is($Unbox(bx) : IMap, TIMap(s, t))));
-
-axiom (forall v: IMap, t0: Ty, t1: Ty ::
-  { $Is(v, TIMap(t0, t1)) }
-  $Is(v, TIMap(t0, t1))
-     <==> (forall bx: Box ::
-      { IMap#Elements(v)[bx] } { IMap#Domain(v)[bx] }
-      IMap#Domain(v)[bx] ==>
-        $IsBox(IMap#Elements(v)[bx], t1) &&
-        $IsBox(bx, t0)));
-axiom (forall v: IMap, t0: Ty, t1: Ty ::
-  { $Is(v, TIMap(t0, t1)) }
-  $Is(v, TIMap(t0, t1)) ==>
-    $Is(IMap#Domain(v), TISet(t0)) &&
-    $Is(IMap#Values(v), TISet(t1)) &&
-    $Is(IMap#Items(v), TISet(Tclass._System.Tuple2(t0, t1))));
-
-#if USE_HEAP
-axiom (forall v: IMap, t0: Ty, t1: Ty, h: Heap ::
-  { $IsAlloc(v, TIMap(t0, t1), h) }
-  $IsAlloc(v, TIMap(t0, t1), h)
-     <==> (forall bx: Box ::
-      { IMap#Elements(v)[bx] } { IMap#Domain(v)[bx] }
-      IMap#Domain(v)[bx] ==>
-        $IsAllocBox(IMap#Elements(v)[bx], t1, h) &&
-        $IsAllocBox(bx, t0, h)));
-#endif
-
 // ---------------------------------------------------------------
 // -- Axiomatization of IMaps ------------------------------------
 // ---------------------------------------------------------------
@@ -47,7 +5,6 @@ axiom (forall v: IMap, t0: Ty, t1: Ty, h: Heap ::
 type IMap;
 
 function {:identity} LitIMap(x: IMap): IMap { x }
-axiom (forall x: IMap :: { $Box(LitIMap(x)) } $Box(LitIMap(x)) == LitBox($Box(x)) );
 
 // A IMap is defined by two functions, Map#Domain and Map#Elements.
 
@@ -63,7 +20,7 @@ axiom (forall m: IMap ::
   m == IMap#Empty() || (exists v: Box :: IMap#Values(m)[v]));
 axiom (forall m: IMap ::
   { IMap#Items(m) }
-  m == IMap#Empty() || (exists k, v: Box :: IMap#Items(m)[$Box(#_System._tuple#2._#Make2(k, v))]));
+  m == IMap#Empty() || (exists k, v: Box :: IMap#Items(m)[BoxDatatype(#_System._tuple#2._#Make2(k, v))]));
 
 axiom (forall m: IMap ::
   { IMap#Domain(m) }
@@ -101,8 +58,8 @@ function IMap#Items(IMap) : Set;
 
 axiom (forall m: IMap, item: Box :: { IMap#Items(m)[item] }
   IMap#Items(m)[item] <==>
-    IMap#Domain(m)[_System.Tuple2._0($Unbox(item))] &&
-    IMap#Elements(m)[_System.Tuple2._0($Unbox(item))] == _System.Tuple2._1($Unbox(item)));
+    IMap#Domain(m)[_System.Tuple2._0(item->vDatatype)] &&
+    IMap#Elements(m)[_System.Tuple2._0(item->vDatatype)] == _System.Tuple2._1(item->vDatatype));
 
 // Here are the operations that produce Map values.
 function IMap#Empty(): IMap;
@@ -117,12 +74,12 @@ axiom (forall a: [Box]bool, b: [Box]Box, t: Ty ::
 axiom (forall a: [Box]bool, b: [Box]Box, t: Ty ::
   { IMap#Elements(IMap#Glue(a, b, t)) }
   IMap#Elements(IMap#Glue(a, b, t)) == b);
-axiom (forall a: [Box]bool, b: [Box]Box, t0, t1: Ty ::
-  { IMap#Glue(a, b, TIMap(t0, t1)) }
-  // In the following line, no trigger needed, since the quantifier only gets used in negative contexts
-  (forall bx: Box :: a[bx] ==> $IsBox(bx, t0) && $IsBox(b[bx], t1))
-  ==>
-  $Is(Map#Glue(a, b, TIMap(t0, t1)), TIMap(t0, t1)));
+// axiom (forall a: [Box]bool, b: [Box]Box, t0, t1: Ty ::
+//   { IMap#Glue(a, b, TIMap(t0, t1)) }
+//   // In the following line, no trigger needed, since the quantifier only gets used in negative contexts
+//   (forall bx: Box :: a[bx] ==> $IsBox(bx, t0) && $IsBox(b[bx], t1))
+//   ==>
+//   $Is(Map#Glue(a, b, TIMap(t0, t1)), TIMap(t0, t1)));
 
 //Build is used in displays
 function IMap#Build(IMap, Box, Box): IMap;

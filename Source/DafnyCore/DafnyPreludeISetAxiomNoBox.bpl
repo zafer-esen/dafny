@@ -1,26 +1,3 @@
-function TISet(Ty) : Ty;
-axiom (forall t: Ty :: { TISet(t) } Inv0_TISet(TISet(t)) == t);
-axiom (forall t: Ty :: { TISet(t) }     Tag(TISet(t))     == TagISet);
-
-function Inv0_TISet(Ty) : Ty;
-
-const unique TagISet    : TyTag;
-
-axiom (forall bx : Box, t : Ty ::
-    { $IsBox(bx, TISet(t)) }
-    ( $IsBox(bx, TISet(t)) ==> $Box($Unbox(bx) : ISet) == bx && $Is($Unbox(bx) : ISet, TISet(t))));
-
-axiom (forall v: ISet, t0: Ty :: { $Is(v, TISet(t0)) }
-  $Is(v, TISet(t0)) <==>
-  (forall bx: Box :: { v[bx] }
-    v[bx] ==> $IsBox(bx, t0)));
-
-#if USE_HEAP
-axiom (forall v: ISet, t0: Ty, h: Heap :: { $IsAlloc(v, TISet(t0), h) }
-  $IsAlloc(v, TISet(t0), h) <==>
-  (forall bx: Box :: { v[bx] }
-    v[bx] ==> $IsAllocBox(bx, t0, h)));
-#endif
 // ---------------------------------------------------------------
 // -- Axiomatization of isets -------------------------------------
 // ---------------------------------------------------------------
@@ -28,7 +5,6 @@ axiom (forall v: ISet, t0: Ty, h: Heap :: { $IsAlloc(v, TISet(t0), h) }
 type ISet = [Box]bool;
 
 function {:identity} LitISet(x: ISet): ISet { x }
-axiom (forall x: ISet :: { $Box(LitISet(x)) } $Box(LitISet(x)) == LitBox($Box(x)) );
 
 function ISet#Empty(): Set;
 axiom (forall o: Box :: { ISet#Empty()[o] } !ISet#Empty()[o]);

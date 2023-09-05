@@ -43,7 +43,7 @@ namespace Microsoft.Dafny {
           cases_body = BplOr(cases_body, disj);
           tr = new Bpl.Trigger(ctor.tok, true, new List<Bpl.Expr> { disj, isPredicate }, tr);
         }
-        var body = Bpl.Expr.Imp(isPredicate, cases_body);
+        var body = BplImp(isPredicate, cases_body);
         var ax = BplForall(boundVariables, tr, body);
         var axiom = new Bpl.Axiom(dt.tok, ax, "Questionmark data type disjunctivity");
         sink.AddTopLevelDeclaration(axiom);
@@ -124,7 +124,7 @@ namespace Microsoft.Dafny {
           eqs = BplAnd(eqs, eq);
         }
 
-        var ax = BplForall(new List<Variable> { aVar, bVar }, trigger, Bpl.Expr.Imp(ante, Bpl.Expr.Iff(dtEqual, eqs)));
+        var ax = BplForall(new List<Variable> { aVar, bVar }, trigger, BplImp(ante, Bpl.Expr.Iff(dtEqual, eqs)));
         AddOtherDefinition(constructorFunctions[ctor], new Bpl.Axiom(dt.tok, ax, $"Datatype extensional equality definition: {ctor.FullName}"));
       }
     }
@@ -522,7 +522,7 @@ namespace Microsoft.Dafny {
                 Bpl.Expr.Lt(ie, FunctionCall(arg.tok, BuiltinFunction.SeqLength, null, args[i])));
               var seqIndex = FunctionCall(arg.tok, BuiltinFunction.SeqIndex, predef.DatatypeType, args[i], ie);
               Bpl.Expr lhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null,
-                FunctionCall(arg.tok, BuiltinFunction.Unbox, predef.DatatypeType, seqIndex));
+                options.UseBoxDt ? UnboxIfBoxed(seqIndex, predef.DatatypeType, arg.tok) : FunctionCall(arg.tok, BuiltinFunction.Unbox, predef.DatatypeType, seqIndex));
               var ct = FunctionCall(ctor.tok, ctor.FullName, predef.DatatypeType, args);
               var rhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null, ct);
               q = new Bpl.ForallExpr(ctor.tok, bvs, new Trigger(lhs.tok, true, new List<Bpl.Expr> { seqIndex, ct }),
@@ -582,9 +582,12 @@ namespace Microsoft.Dafny {
               bvs.Add(dVar);
               var ie = new Bpl.IdentifierExpr(arg.tok, dVar);
               var f = finite ? BuiltinFunction.MapDomain : BuiltinFunction.IMapDomain;
-              var domain = FunctionCall(arg.tok, f, predef.MapType(arg.tok, finite, predef.BoxType, predef.BoxType),
+              var domain = FunctionCall(arg.tok, f, predef.MapType(arg.tok, finite),
                 args[i]);
-              var inDomain = Bpl.Expr.SelectTok(arg.tok, domain, FunctionCall(arg.tok, BuiltinFunction.Box, null, ie));
+              var boxed = options.UseBoxDt
+                ? ApplyBox(arg.tok, ie, predef.DatatypeType)
+                : FunctionCall(arg.tok, BuiltinFunction.Box, null, ie);
+              var inDomain = Bpl.Expr.SelectTok(arg.tok, domain, boxed);
               var lhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null, ie);
               var ct = FunctionCall(ctor.tok, ctor.FullName, predef.DatatypeType, args);
               var rhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null, ct);
@@ -601,14 +604,16 @@ namespace Microsoft.Dafny {
               bvs.Add(bxVar);
               var ie = new Bpl.IdentifierExpr(arg.tok, bxVar);
               var f = finite ? BuiltinFunction.MapDomain : BuiltinFunction.IMapDomain;
-              var domain = FunctionCall(arg.tok, f, predef.MapType(arg.tok, finite, predef.BoxType, predef.BoxType),
+              var domain = FunctionCall(arg.tok, f, predef.MapType(arg.tok, finite),
                 args[i]);
               var inDomain = Bpl.Expr.SelectTok(arg.tok, domain, ie);
               var ef = finite ? BuiltinFunction.MapElements : BuiltinFunction.IMapElements;
-              var element = FunctionCall(arg.tok, ef, predef.MapType(arg.tok, finite, predef.BoxType, predef.BoxType),
+              var element = FunctionCall(arg.tok, ef, predef.MapType(arg.tok, finite),
                 args[i]);
               var elmt = Bpl.Expr.SelectTok(arg.tok, element, ie);
-              var unboxElmt = FunctionCall(arg.tok, BuiltinFunction.Unbox, predef.DatatypeType, elmt);
+              var unboxElmt = options.UseBoxDt
+                ? UnboxIfBoxed(elmt, predef.DatatypeType, arg.tok)
+                : FunctionCall(arg.tok, BuiltinFunction.Unbox, predef.DatatypeType, elmt);
               var lhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null, unboxElmt);
               var ct = FunctionCall(ctor.tok, ctor.FullName, predef.DatatypeType, args);
               var rhs = FunctionCall(ctor.tok, BuiltinFunction.DtRank, null, ct);

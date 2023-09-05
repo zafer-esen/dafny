@@ -104,7 +104,9 @@ axiom (forall<T> x: T :: { $Box(Lit(x)) } $Box(Lit(x)) == Lit($Box(x)) );
 function {:identity} LitBool(x: bool): bool { x }
 axiom (forall x: bool :: { $Box(LitBool(x)) } $Box(LitBool(x)) == LitBox($Box(x)) );
 
-// LitInt is also used for char
+function {:identity} LitChar(x: char): char { x }
+axiom (forall x: char :: { $Box(LitChar(x)) } $Box(LitChar(x)) == LitBox($Box(x)) );
+
 function {:identity} LitInt(x: int): int { x }
 axiom (forall x: int :: { $Box(LitInt(x)) } $Box(LitInt(x)) == LitBox($Box(x)) );
 
@@ -116,6 +118,9 @@ axiom (forall x: DatatypeType :: { $Box(LitDatatypeType(x)) } $Box(LitDatatypeTy
 
 function {:identity} LitHandleType(x: HandleType): HandleType { x }
 axiom (forall x: HandleType :: { $Box(LitHandleType(x)) } $Box(LitHandleType(x)) == LitBox($Box(x)) );
+
+function {:identity} LitRef(x: ref): ref { x }
+axiom (forall x: ref :: { $Box(LitRef(x)) } $Box(LitRef(x)) == LitBox($Box(x)) );
 
 // LitBox is also used for ORDINAL
 function {:identity} LitBox(x: Box): Box { x }

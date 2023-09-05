@@ -5,7 +5,6 @@
 type Set = [Box]bool;
 
 function {:identity} LitSet(x: Set): Set { x }
-axiom (forall x: Set :: { $Box(LitSet(x)) } $Box(LitSet(x)) == LitBox($Box(x)) );
 
 function Set#Card(Set): int;
 axiom (forall s: Set :: { Set#Card(s) } 0 <= Set#Card(s));
