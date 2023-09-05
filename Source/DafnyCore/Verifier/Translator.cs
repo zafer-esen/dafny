@@ -375,11 +375,11 @@ namespace Microsoft.Dafny {
       public Bpl.Type BigOrdinalType {
         get { return BoxType; }
       }
-      private readonly Bpl.TypeSynonymDecl setTypeCtor;
-      private readonly Bpl.TypeSynonymDecl isetTypeCtor;
-      private readonly Bpl.TypeSynonymDecl multiSetTypeCtor;
-      private readonly Bpl.TypeCtorDecl mapTypeCtor;
-      private readonly Bpl.TypeCtorDecl imapTypeCtor;
+      private readonly Bpl.NamedDeclaration setTypeCtor;
+      private readonly Bpl.NamedDeclaration isetTypeCtor;
+      private readonly Bpl.NamedDeclaration multiSetTypeCtor;
+      private readonly Bpl.NamedDeclaration mapTypeCtor;
+      private readonly Bpl.NamedDeclaration imapTypeCtor;
       public readonly Bpl.Function ArrayLength;
       public readonly Bpl.Function RealFloor;
       public readonly Bpl.Function ORDINAL_IsLimit;
@@ -457,8 +457,13 @@ namespace Microsoft.Dafny {
         Contract.Requires(tok != null);
         Contract.Requires(ty != null);
         Contract.Ensures(Contract.Result<Bpl.Type>() != null);
-
-        return new Bpl.TypeSynonymAnnotation(Token.NoToken, finite ? setTypeCtor : isetTypeCtor, new List<Bpl.Type> { });
+        if (setTypeCtor is Bpl.TypeSynonymDecl setSynonym && isetTypeCtor is Bpl.TypeSynonymDecl isetSynonym) {
+          return new Bpl.TypeSynonymAnnotation(Token.NoToken, finite ? setSynonym : isetSynonym, new List<Bpl.Type> { });
+        } else if (mapTypeCtor is Bpl.TypeCtorDecl setCtor && isetTypeCtor is Bpl.TypeCtorDecl isetCtor) {
+          return new Bpl.CtorType(Token.NoToken, finite ? setCtor : isetCtor, new List<Bpl.Type> { });
+        } else {
+          throw new NotImplementedException("Do not know how to construct SetType.");
+        }
       }
 
       public Bpl.Type MultiSetType(Bpl.IToken tok, Bpl.Type ty) {
@@ -466,14 +471,25 @@ namespace Microsoft.Dafny {
         Contract.Requires(ty != null);
         Contract.Ensures(Contract.Result<Bpl.Type>() != null);
 
-        return new Bpl.TypeSynonymAnnotation(Token.NoToken, multiSetTypeCtor, new List<Bpl.Type> { ty });
+        if (multiSetTypeCtor is Bpl.TypeSynonymDecl tSynonym) {
+          return new Bpl.TypeSynonymAnnotation(Token.NoToken, tSynonym, new List<Bpl.Type> { });
+        } else if (multiSetTypeCtor is Bpl.TypeCtorDecl tCtor) {
+          return new Bpl.CtorType(Token.NoToken, tCtor, new List<Bpl.Type> { });
+        } else {
+          throw new NotImplementedException("Do not know how to construct MultiSetType.");
+        }
       }
       public Bpl.Type MapType(Bpl.IToken tok, bool finite, Bpl.Type tya, Bpl.Type tyb) {
         Contract.Requires(tok != null);
         Contract.Requires(tya != null && tyb != null);
         Contract.Ensures(Contract.Result<Bpl.Type>() != null);
-
-        return new Bpl.CtorType(Token.NoToken, finite ? mapTypeCtor : imapTypeCtor, new List<Bpl.Type> { tya, tyb });
+        if (mapTypeCtor is Bpl.TypeSynonymDecl mapSynonym && imapTypeCtor is Bpl.TypeSynonymDecl imapSynonym) {
+          return new Bpl.TypeSynonymAnnotation(Token.NoToken, finite ? mapSynonym : imapSynonym, new List<Bpl.Type> { });
+        } else if (mapTypeCtor is Bpl.TypeCtorDecl mapCtor && imapTypeCtor is Bpl.TypeCtorDecl imapCtor) {
+          return new Bpl.CtorType(Token.NoToken, finite ? mapCtor : imapCtor, new List<Bpl.Type> { });
+        } else {
+          throw new NotImplementedException("Do not know how to construct MapType.");
+        }
       }
 
       public Bpl.Type SeqType(Bpl.IToken tok) {
@@ -484,7 +500,7 @@ namespace Microsoft.Dafny {
         } else if (seqTypeCtor is Bpl.TypeCtorDecl seqCtor) {
           return new Bpl.CtorType(Token.NoToken, seqCtor, new List<Bpl.Type> { });
         } else {
-          return null;
+          throw new NotImplementedException("Do not know how to construct SeqType.");
         }
       }
 
@@ -510,8 +526,8 @@ namespace Microsoft.Dafny {
 
       public PredefinedDecls(DafnyOptions options,
                              Bpl.TypeCtorDecl charType, Bpl.TypeCtorDecl refType, Bpl.TypeCtorDecl boxType, PredefDatatypes.BoxDatatype boxDt,
-                             Bpl.TypeSynonymDecl setTypeCtor, Bpl.TypeSynonymDecl isetTypeCtor, Bpl.TypeSynonymDecl multiSetTypeCtor,
-                             Bpl.TypeCtorDecl mapTypeCtor, Bpl.TypeCtorDecl imapTypeCtor,
+                             Bpl.NamedDeclaration setTypeCtor, Bpl.NamedDeclaration isetTypeCtor, Bpl.NamedDeclaration multiSetTypeCtor,
+                             Bpl.NamedDeclaration mapTypeCtor, Bpl.NamedDeclaration imapTypeCtor,
                              Bpl.Function arrayLength, Bpl.Function realFloor,
                              Bpl.Function ORD_isLimit, Bpl.Function ORD_isSucc, Bpl.Function ORD_offset, Bpl.Function ORD_isNat,
                              Bpl.Function mapDomain, Bpl.Function imapDomain,
@@ -670,9 +686,9 @@ namespace Microsoft.Dafny {
 
       Bpl.TypeCtorDecl charType = null;
       Bpl.TypeCtorDecl refType = null;
-      Bpl.TypeSynonymDecl setTypeCtor = null;
-      Bpl.TypeSynonymDecl isetTypeCtor = null;
-      Bpl.TypeSynonymDecl multiSetTypeCtor = null;
+      Bpl.NamedDeclaration setTypeCtor = null;
+      Bpl.NamedDeclaration isetTypeCtor = null;
+      Bpl.NamedDeclaration multiSetTypeCtor = null;
       Bpl.Function arrayLength = null;
       Bpl.Function realFloor = null;
       Bpl.Function ORDINAL_isLimit = null;
@@ -706,8 +722,8 @@ namespace Microsoft.Dafny {
       Bpl.TypeCtorDecl dtCtorId = null;
       Bpl.TypeCtorDecl boxType = null;
       PredefDatatypes.BoxDatatype boxDatatype = null;
-      Bpl.TypeCtorDecl mapTypeCtor = null;
-      Bpl.TypeCtorDecl imapTypeCtor = null;
+      Bpl.NamedDeclaration mapTypeCtor = null;
+      Bpl.NamedDeclaration imapTypeCtor = null;
       Bpl.GlobalVariable heap = null;
       Bpl.Constant allocField = null;
       foreach (var d in prog.TopLevelDeclarations) {
@@ -758,6 +774,12 @@ namespace Microsoft.Dafny {
             imapTypeCtor = dt;
           } else if (dt.Name == "Seq") {
             seqTypeCtor = dt;
+          } else if (dt.Name == "Set") {
+            setTypeCtor = dt;
+          } else if (dt.Name == "MultiSet") {
+            multiSetTypeCtor = dt;
+          } else if (dt.Name == "ISet") {
+            isetTypeCtor = dt;
           }
         } else if (d is Bpl.TypeSynonymDecl) {
           Bpl.TypeSynonymDecl dt = (Bpl.TypeSynonymDecl)d;
@@ -773,6 +795,10 @@ namespace Microsoft.Dafny {
             bv0TypeDecl = dt;
           } else if (dt.Name == "Seq") {
             seqTypeCtor = dt;
+          } else if (dt.Name == "Map") {
+            mapTypeCtor = dt;
+          } else if (dt.Name == "IMap") {
+            imapTypeCtor = dt;
           }
         } else if (d is Bpl.Constant) {
           Bpl.Constant c = (Bpl.Constant)d;
@@ -1844,34 +1870,15 @@ namespace Microsoft.Dafny {
       return ReadHeap(tok, heapExpr, e, predef.Alloc(tok), Dafny.Type.Bool);
     }
 
-    public Bpl.Expr ReadHeap(IToken tok, Expr heap, Expr r, Expr f, Bpl.Type ty, bool doNotUnbox = false) {
-      Contract.Requires(tok != null);
-      Contract.Requires(heap != null);
-      Contract.Requires(r != null);
-      Contract.Requires(f != null);
-      Contract.Requires(ty != null);
-      Contract.Ensures(Contract.Result<Bpl.NAryExpr>() != null);
-
-      List<Bpl.Expr> args = new List<Bpl.Expr>();
-      args.Add(heap);
-      args.Add(r);
-      args.Add(f);
-      Bpl.Type t = (f.Type != null) ? f.Type : f.ShallowType;
-      Contract.Assert(options.UseBoxDt || ty.Equals(t.AsCtor.Arguments[0]));
-      Bpl.Expr readCall =
-        new Bpl.NAryExpr(tok,
-          new Bpl.FunctionCall(new Bpl.IdentifierExpr(tok, "read", options.UseBoxDt ? t.AsCtor : t.AsCtor.Arguments[0])),
-          args);
-
-      return doNotUnbox ? readCall : UnboxIfBoxed(readCall, ty);
+    public Bpl.Expr ReadHeap(IToken tok, Expr heap, Expr r, Expr f, Type ty = null, bool doNotUnbox = false) {
+      return ReadHeap(tok, heap, r, f, ty == null ? null : TrType(ty), doNotUnbox);
     }
 
-    public Bpl.Expr ReadHeap(IToken tok, Expr heap, Expr r, Expr f, Type ty, bool doNotUnbox = false) {
+    public Bpl.Expr ReadHeap(IToken tok, Expr heap, Expr r, Expr f, Bpl.Type ty = null, bool doNotUnbox = false) {
       Contract.Requires(tok != null);
       Contract.Requires(heap != null);
       Contract.Requires(r != null);
       Contract.Requires(f != null);
-      Contract.Requires(ty != null);
       Contract.Ensures(Contract.Result<Bpl.NAryExpr>() != null);
 
       List<Bpl.Expr> args = new List<Bpl.Expr>();
@@ -1879,14 +1886,20 @@ namespace Microsoft.Dafny {
       args.Add(r);
       args.Add(f);
       Bpl.Type t = (f.Type != null) ? f.Type : f.ShallowType;
-      var boogieTy = TrType(ty);
-      Contract.Assert(options.UseBoxDt || boogieTy.Equals(t.AsCtor.Arguments[0]));
+
       Bpl.Expr readCall =
         new Bpl.NAryExpr(tok,
           new Bpl.FunctionCall(new Bpl.IdentifierExpr(tok, "read", options.UseBoxDt ? t.AsCtor : t.AsCtor.Arguments[0])),
           args);
 
-      return doNotUnbox ? readCall : UnboxIfBoxed(readCall, ty);
+      var res = doNotUnbox ? readCall : UnboxIfBoxed(readCall, ty);
+
+      // Add a type coercion if supplied
+      if (ty is not null && !options.UseBoxDt) {
+        Contract.Assert(ty.Equals(t.AsCtor.Arguments[0]));
+        res = Bpl.Expr.CoerceType(tok, readCall, ty);
+      }
+      return res;
     }
 
     public Bpl.Expr ReadHeap(IToken tok, Expr heap, Expr r, Bpl.Type ty) {
@@ -1904,7 +1917,7 @@ namespace Microsoft.Dafny {
         args), ty);
     }
 
-    public static Boogie.NAryExpr UpdateHeap(IToken tok, Expr heap, Expr r, Expr f, Expr v) {
+    public Boogie.NAryExpr UpdateHeap(IToken tok, Expr heap, Expr r, Expr f, Expr v) {
       Contract.Requires(tok != null);
       Contract.Requires(heap != null);
       Contract.Requires(r != null);
@@ -1916,7 +1929,7 @@ namespace Microsoft.Dafny {
       args.Add(heap);
       args.Add(r);
       args.Add(f);
-      args.Add(v);
+      args.Add(options.UseBoxDt ? ApplyBox(tok, v, v.ShallowType) : v);
       return new Boogie.NAryExpr(tok,
         new Boogie.FunctionCall(new Boogie.IdentifierExpr(tok, "update", heap.Type)),
         args);
@@ -2294,7 +2307,7 @@ namespace Microsoft.Dafny {
           FunctionCall(iter.tok, BuiltinFunction.SeqLength, null,
           ReadHeap(iter.tok, etran.HeapExpr,
             new Bpl.IdentifierExpr(iter.tok, etran.This, predef.RefType),
-            new Bpl.IdentifierExpr(iter.tok, GetField(ys)), predef.SeqType(iter.tok))))); // TODO: predef.SeqType(iter.tok) is likely wrong here
+            new Bpl.IdentifierExpr(iter.tok, GetField(ys)), (Type)null))));
       }
       return wh;
     }
@@ -4435,7 +4448,7 @@ namespace Microsoft.Dafny {
       Bpl.Expr field; var fieldVar = BplBoundVar("$f", predef.FieldName(f.tok, alpha), out field);
       Bpl.Expr oNotNull = Bpl.Expr.Neq(o, predef.Null);
       Bpl.Expr oNotNullAlloced = oNotNull;
-      Bpl.Expr unchanged = Bpl.Expr.Eq(ReadHeap(f.tok, h0, o, field, alpha), ReadHeap(f.tok, h1, o, field, alpha));
+      Bpl.Expr unchanged = Bpl.Expr.Eq(ReadHeap(f.tok, h0, o, field, alpha, true), ReadHeap(f.tok, h1, o, field, alpha, true));
 
       Bpl.Expr h0IsHeapAnchor = FunctionCall(h0.tok, BuiltinFunction.IsHeapAnchor, null, h0);
       Bpl.Expr heapSucc = HeapSucc(h0, h1);
@@ -7788,8 +7801,9 @@ namespace Microsoft.Dafny {
     ///   If the expression is boxed, this unboxes it.
     /// </summary>
     public Bpl.Expr UnboxIfBoxed(Bpl.Expr e, Bpl.Type t) {
-      if (e.Type != null && e.Type.Equals(predef.BoxType) || 
-          e.ShallowType != null && e.ShallowType.Equals(predef.BoxType)) {
+      if (options.UseBoxDt &&
+          (e.Type != null && e.Type.Equals(predef.BoxType) || 
+          e.ShallowType != null && e.ShallowType.Equals(predef.BoxType))) {
         return PredefDatatypes.MkFieldAccess(e.tok, e, predef.GetBoxAccessor(t), predef.BoxDatatype.Dt);
       } else {
         return e;
@@ -9527,7 +9541,7 @@ namespace Microsoft.Dafny {
                 // assert EE_ii satisfies any subset-type constraints;
                 CheckSubrange(v.tok, EE_ii, v.Type, tRhs.EType, builder);
                 // assume nw[ii] == EE_ii;
-                var ai = ReadHeap(tok, etran.HeapExpr, nw, GetArrayIndexFieldName(tok, new List<Bpl.Expr> { Bpl.Expr.Literal(ii) }), Bpl.Type.Bool);
+                var ai = ReadHeap(tok, etran.HeapExpr, nw, GetArrayIndexFieldName(tok, new List<Bpl.Expr> { Bpl.Expr.Literal(ii) }), (Type)null);
                 builder.Add(new Bpl.AssumeCmd(tok, Bpl.Expr.Eq(UnboxUnlessInherentlyBoxed(ai, tRhs.EType), EE_ii)));
                 ii++;
               }
@@ -9539,7 +9553,7 @@ namespace Microsoft.Dafny {
             // $Heap[this, _new] := Set#UnionOne<BoxType>($Heap[this, _new], $Box($nw));
             var th = new Bpl.IdentifierExpr(tok, etran.This, predef.RefType);
             var nwField = new Bpl.IdentifierExpr(tok, GetField(iter.Member_New));
-            var thisDotNew = ReadHeap(tok, etran.HeapExpr, th, nwField, nwField.Type); // TODO: nwField.Type is most likely wrong
+            var thisDotNew = ReadHeap(tok, etran.HeapExpr, th, nwField, (Type)null);
             var unionOne = FunctionCall(tok, BuiltinFunction.SetUnionOne, predef.BoxType, thisDotNew, FunctionCall(tok, BuiltinFunction.Box, null, nw));
             var heapRhs = UpdateHeap(tok, etran.HeapExpr, th, nwField, unionOne);
             heapAllocationRecorder = Bpl.Cmd.SimpleAssign(tok, etran.HeapCastToIdentifierExpr, heapRhs);
@@ -9637,7 +9651,7 @@ namespace Microsoft.Dafny {
         // Assume that array elements have initial values according to the given initialization function.  That is:
         // assume (forall i0,i1,i2,... :: { nw[i0,i1,i2,...] }
         //            0 <= i0 < ... && ... ==> nw[i0,i1,i2,...] == init.requires(i0,i1,i2,...));
-        var ai = ReadHeap(tok, etran.HeapExpr, nw, GetArrayIndexFieldName(tok, indices), elementType); // TODO: nw.Type might be wrong
+        var ai = ReadHeap(tok, etran.HeapExpr, nw, GetArrayIndexFieldName(tok, indices), (Type)null);
         var ai_prime = UnboxUnlessInherentlyBoxed(ai, elementType);
         var tr = new Bpl.Trigger(tok, true, new List<Bpl.Expr> { ai });
         q = new Bpl.ForallExpr(tok, bvs, tr,

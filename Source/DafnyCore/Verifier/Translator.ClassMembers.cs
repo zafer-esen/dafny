@@ -374,9 +374,8 @@ namespace Microsoft.Dafny {
         is_hf = MkIs(oDotF, tyexprs[0], true);
         isalloc_hf = MkIsAlloc(oDotF, tyexprs[0], h, true);
       } else {
-        var boxed = ApplyBox(oDotF.tok, oDotF, TrType(f.Type));
-        is_hf = MkIs(boxed, f.Type); // $Is(h[o, f], ..)
-        isalloc_hf = MkIsAlloc(boxed, f.Type, h); // $IsAlloc(h[o, f], ..)
+        is_hf = MkIs(oDotF, f.Type); // $Is(h[o, f], ..)
+        isalloc_hf = MkIsAlloc(oDotF, f.Type, h); // $IsAlloc(h[o, f], ..)
       }
 
       Bpl.Expr ax = BplForall(bvsTypeAxiom, tr, BplImp(ante, is_hf));

@@ -12,9 +12,9 @@ const unique TagIMap     : TyTag;
 
 axiom (forall bx : Box, s : Ty, t : Ty ::
     { $IsBox(bx, TIMap(s, t)) }
-    ( $IsBox(bx, TIMap(s, t)) ==> $Box($Unbox(bx) : IMap Box Box) == bx && $Is($Unbox(bx) : IMap Box Box, TIMap(s, t))));
+    ( $IsBox(bx, TIMap(s, t)) ==> $Box($Unbox(bx) : IMap) == bx && $Is($Unbox(bx) : IMap, TIMap(s, t))));
 
-axiom (forall v: IMap Box Box, t0: Ty, t1: Ty ::
+axiom (forall v: IMap, t0: Ty, t1: Ty ::
   { $Is(v, TIMap(t0, t1)) }
   $Is(v, TIMap(t0, t1))
      <==> (forall bx: Box ::
@@ -22,7 +22,7 @@ axiom (forall v: IMap Box Box, t0: Ty, t1: Ty ::
       IMap#Domain(v)[bx] ==>
         $IsBox(IMap#Elements(v)[bx], t1) &&
         $IsBox(bx, t0)));
-axiom (forall v: IMap Box Box, t0: Ty, t1: Ty ::
+axiom (forall v: IMap, t0: Ty, t1: Ty ::
   { $Is(v, TIMap(t0, t1)) }
   $Is(v, TIMap(t0, t1)) ==>
     $Is(IMap#Domain(v), TISet(t0)) &&
@@ -30,7 +30,7 @@ axiom (forall v: IMap Box Box, t0: Ty, t1: Ty ::
     $Is(IMap#Items(v), TISet(Tclass._System.Tuple2(t0, t1))));
 
 #if USE_HEAP
-axiom (forall v: IMap Box Box, t0: Ty, t1: Ty, h: Heap ::
+axiom (forall v: IMap, t0: Ty, t1: Ty, h: Heap ::
   { $IsAlloc(v, TIMap(t0, t1), h) }
   $IsAlloc(v, TIMap(t0, t1), h)
      <==> (forall bx: Box ::
@@ -44,31 +44,31 @@ axiom (forall v: IMap Box Box, t0: Ty, t1: Ty, h: Heap ::
 // -- Axiomatization of IMaps ------------------------------------
 // ---------------------------------------------------------------
 
-type IMap U V;
+type IMap;
 
 // A IMap is defined by two functions, Map#Domain and Map#Elements.
 
-function IMap#Domain<U,V>(IMap U V) : Set U;
+function IMap#Domain(IMap) : Set;
 
-function IMap#Elements<U,V>(IMap U V) : [U]V;
+function IMap#Elements(IMap) : [Box]Box;
 
-axiom (forall<U, V> m: IMap U V ::
+axiom (forall m: IMap ::
   { IMap#Domain(m) }
-  m == IMap#Empty() || (exists k: U :: IMap#Domain(m)[k]));
-axiom (forall<U, V> m: IMap U V ::
+  m == IMap#Empty() || (exists k: Box :: IMap#Domain(m)[k]));
+axiom (forall m: IMap ::
   { IMap#Values(m) }
-  m == IMap#Empty() || (exists v: V :: IMap#Values(m)[v]));
-axiom (forall<U, V> m: IMap U V ::
+  m == IMap#Empty() || (exists v: Box :: IMap#Values(m)[v]));
+axiom (forall m: IMap ::
   { IMap#Items(m) }
   m == IMap#Empty() || (exists k, v: Box :: IMap#Items(m)[$Box(#_System._tuple#2._#Make2(k, v))]));
 
-axiom (forall<U, V> m: IMap U V ::
+axiom (forall m: IMap ::
   { IMap#Domain(m) }
   m == IMap#Empty() <==> IMap#Domain(m) == ISet#Empty());
-axiom (forall<U, V> m: IMap U V ::
+axiom (forall m: IMap ::
   { IMap#Values(m) }
   m == IMap#Empty() <==> IMap#Values(m) == ISet#Empty());
-axiom (forall<U, V> m: IMap U V ::
+axiom (forall m: IMap ::
   { IMap#Items(m) }
   m == IMap#Empty() <==> IMap#Items(m) == ISet#Empty());
 
@@ -77,11 +77,11 @@ axiom (forall<U, V> m: IMap U V ::
 // square brackets) so we need to define what these mean for the Set
 // returned by Map#Values.
 
-function IMap#Values<U,V>(IMap U V) : Set V;
+function IMap#Values(IMap) : Set;
 
-axiom (forall<U,V> m: IMap U V, v: V :: { IMap#Values(m)[v] }
+axiom (forall m: IMap, v: Box :: { IMap#Values(m)[v] }
   IMap#Values(m)[v] ==
-	(exists u: U :: { IMap#Domain(m)[u] } { IMap#Elements(m)[u] }
+	(exists u: Box :: { IMap#Domain(m)[u] } { IMap#Elements(m)[u] }
 	  IMap#Domain(m)[u] &&
     v == IMap#Elements(m)[u]));
 
@@ -94,24 +94,24 @@ axiom (forall<U,V> m: IMap U V, v: V :: { IMap#Values(m)[v] }
 // definition of IMap#Items here is to be considered Dafny specific.  Also, note
 // that it relies on the two destructors for 2-tuples.
 
-function IMap#Items<U,V>(IMap U V) : Set Box;
+function IMap#Items(IMap) : Set;
 
-axiom (forall m: IMap Box Box, item: Box :: { IMap#Items(m)[item] }
+axiom (forall m: IMap, item: Box :: { IMap#Items(m)[item] }
   IMap#Items(m)[item] <==>
     IMap#Domain(m)[_System.Tuple2._0($Unbox(item))] &&
     IMap#Elements(m)[_System.Tuple2._0($Unbox(item))] == _System.Tuple2._1($Unbox(item)));
 
 // Here are the operations that produce Map values.
-function IMap#Empty<U, V>(): IMap U V;
-axiom (forall<U, V> u: U ::
-        { IMap#Domain(IMap#Empty(): IMap U V)[u] }
-        !IMap#Domain(IMap#Empty(): IMap U V)[u]);
+function IMap#Empty(): IMap;
+axiom (forall u: Box ::
+        { IMap#Domain(IMap#Empty(): IMap)[u] }
+        !IMap#Domain(IMap#Empty(): IMap)[u]);
 
-function IMap#Glue<U, V>([U] bool, [U]V, Ty): IMap U V;
-axiom (forall<U, V> a: [U]bool, b: [U]V, t: Ty ::
+function IMap#Glue([Box] bool, [Box]Box, Ty): IMap;
+axiom (forall a: [Box]bool, b: [Box]Box, t: Ty ::
   { IMap#Domain(IMap#Glue(a, b, t)) }
   IMap#Domain(IMap#Glue(a, b, t)) == a);
-axiom (forall<U, V> a: [U]bool, b: [U]V, t: Ty ::
+axiom (forall a: [Box]bool, b: [Box]Box, t: Ty ::
   { IMap#Elements(IMap#Glue(a, b, t)) }
   IMap#Elements(IMap#Glue(a, b, t)) == b);
 axiom (forall a: [Box]bool, b: [Box]Box, t0, t1: Ty ::
@@ -122,12 +122,12 @@ axiom (forall a: [Box]bool, b: [Box]Box, t0, t1: Ty ::
   $Is(Map#Glue(a, b, TIMap(t0, t1)), TIMap(t0, t1)));
 
 //Build is used in displays
-function IMap#Build<U, V>(IMap U V, U, V): IMap U V;
-/*axiom (forall<U, V> m: IMap U V, u: U, v: V ::
+function IMap#Build(IMap, Box, Box): IMap;
+/*axiom (forall m: IMap, u: Box, v: Box ::
   { IMap#Domain(IMap#Build(m, u, v))[u] } { IMap#Elements(IMap#Build(m, u, v))[u] }
   IMap#Domain(IMap#Build(m, u, v))[u] && IMap#Elements(IMap#Build(m, u, v))[u] == v);*/
 
-axiom (forall<U, V> m: IMap U V, u: U, u': U, v: V ::
+axiom (forall m: IMap, u: Box, u': Box, v: Box ::
   { IMap#Domain(IMap#Build(m, u, v))[u'] } { IMap#Elements(IMap#Build(m, u, v))[u'] }
   (u' == u ==> IMap#Domain(IMap#Build(m, u, v))[u'] &&
                IMap#Elements(IMap#Build(m, u, v))[u'] == v) &&
@@ -135,32 +135,32 @@ axiom (forall<U, V> m: IMap U V, u: U, u': U, v: V ::
                IMap#Elements(IMap#Build(m, u, v))[u'] == IMap#Elements(m)[u']));
 
 //equality for imaps
-function IMap#Equal<U, V>(IMap U V, IMap U V): bool;
-axiom (forall<U, V> m: IMap U V, m': IMap U V::
+function IMap#Equal(IMap, IMap): bool;
+axiom (forall m: IMap, m': IMap::
   { IMap#Equal(m, m') }
-    IMap#Equal(m, m') <==> (forall u : U :: IMap#Domain(m)[u] == IMap#Domain(m')[u]) &&
-                          (forall u : U :: IMap#Domain(m)[u] ==> IMap#Elements(m)[u] == IMap#Elements(m')[u]));
+    IMap#Equal(m, m') <==> (forall u : Box :: IMap#Domain(m)[u] == IMap#Domain(m')[u]) &&
+                          (forall u : Box :: IMap#Domain(m)[u] ==> IMap#Elements(m)[u] == IMap#Elements(m')[u]));
 // extensionality
-axiom (forall<U, V> m: IMap U V, m': IMap U V::
+axiom (forall m: IMap, m': IMap::
   { IMap#Equal(m, m') }
     IMap#Equal(m, m') ==> m == m');
 
 // IMap operations
-function IMap#Merge<U, V>(IMap U V, IMap U V): IMap U V;
-axiom (forall<U, V> m: IMap U V, n: IMap U V ::
+function IMap#Merge(IMap, IMap): IMap;
+axiom (forall m: IMap, n: IMap ::
   { IMap#Domain(IMap#Merge(m, n)) }
   IMap#Domain(IMap#Merge(m, n)) == Set#Union(IMap#Domain(m), IMap#Domain(n)));
-axiom (forall<U, V> m: IMap U V, n: IMap U V, u: U ::
+axiom (forall m: IMap, n: IMap, u: Box ::
   { IMap#Elements(IMap#Merge(m, n))[u] }
   IMap#Domain(IMap#Merge(m, n))[u] ==>
     (!IMap#Domain(n)[u] ==> IMap#Elements(IMap#Merge(m, n))[u] == IMap#Elements(m)[u]) &&
     (IMap#Domain(n)[u] ==> IMap#Elements(IMap#Merge(m, n))[u] == IMap#Elements(n)[u]));
 
-function IMap#Subtract<U, V>(IMap U V, Set U): IMap U V;
-axiom (forall<U, V> m: IMap U V, s: Set U ::
+function IMap#Subtract(IMap, Set): IMap;
+axiom (forall m: IMap, s: Set ::
   { IMap#Domain(IMap#Subtract(m, s)) }
   IMap#Domain(IMap#Subtract(m, s)) == Set#Difference(IMap#Domain(m), s));
-axiom (forall<U, V> m: IMap U V, s: Set U, u: U ::
+axiom (forall m: IMap, s: Set, u: Box ::
   { IMap#Elements(IMap#Subtract(m, s))[u] }
   IMap#Domain(IMap#Subtract(m, s))[u] ==>
     IMap#Elements(IMap#Subtract(m, s))[u] == IMap#Elements(m)[u]);

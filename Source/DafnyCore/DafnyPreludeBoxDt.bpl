@@ -25,12 +25,6 @@ datatype Ty {
   TReal(),
   TORDINAL(),
   TBitvector(len: int),
-  TSet(elemTy: Ty),
-  TISet(elemTy: Ty),
-  TMultiSet(elemTy: Ty),
-  TSeq(elemTy: Ty),
-  TMap(keyTy: Ty, elemTy: Ty),
-  TIMap(keyTy: Ty, elemTy: Ty),
   TClass(tag: ClassTag)
 }
 
@@ -442,7 +436,7 @@ function {:inline} _System.real.Floor(x: real): int { Int(x) }
 // ---------------------------------------------------------------
 type Heap = [ref][Field]Box;
 function {:inline} read(H: Heap, r: ref, f: Field) : Box { H[r][f] }
-function {:inline} update(H:Heap, r:ref, f:Field, v:Box): Heap { H[r := H[r][f := v]] }
+function {:inline} update(H:Heap, r: ref, f:Field, v:Box): Heap { H[r := H[r][f := v]] }
 
 function $IsGoodHeap(Heap): bool;
 function $IsHeapAnchor(Heap): bool;
