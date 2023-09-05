@@ -457,12 +457,22 @@ namespace Microsoft.Dafny {
         Contract.Requires(tok != null);
         Contract.Requires(ty != null);
         Contract.Ensures(Contract.Result<Bpl.Type>() != null);
-        if (setTypeCtor is Bpl.TypeSynonymDecl setSynonym && isetTypeCtor is Bpl.TypeSynonymDecl isetSynonym) {
-          return new Bpl.TypeSynonymAnnotation(Token.NoToken, finite ? setSynonym : isetSynonym, new List<Bpl.Type> { });
-        } else if (mapTypeCtor is Bpl.TypeCtorDecl setCtor && isetTypeCtor is Bpl.TypeCtorDecl isetCtor) {
-          return new Bpl.CtorType(Token.NoToken, finite ? setCtor : isetCtor, new List<Bpl.Type> { });
+        if (finite) {
+          if (setTypeCtor is Bpl.TypeSynonymDecl tSynonym) {
+            return new Bpl.TypeSynonymAnnotation(Token.NoToken, tSynonym, new List<Bpl.Type> { });
+          } else if (setTypeCtor is Bpl.TypeCtorDecl tCtor) {
+            return new Bpl.CtorType(Token.NoToken, tCtor, new List<Bpl.Type> { });
+          } else {
+            throw new NotImplementedException("Do not know how to construct SetType.");
+          }
         } else {
-          throw new NotImplementedException("Do not know how to construct SetType.");
+          if (isetTypeCtor is Bpl.TypeSynonymDecl tSynonym) {
+            return new Bpl.TypeSynonymAnnotation(Token.NoToken, tSynonym, new List<Bpl.Type> { });
+          } else if (isetTypeCtor is Bpl.TypeCtorDecl tCtor) {
+            return new Bpl.CtorType(Token.NoToken, tCtor, new List<Bpl.Type> { });
+          } else {
+            throw new NotImplementedException("Do not know how to construct ISetType.");
+          }
         }
       }
 
@@ -483,22 +493,32 @@ namespace Microsoft.Dafny {
         Contract.Requires(tok != null);
         Contract.Requires(tya != null && tyb != null);
         Contract.Ensures(Contract.Result<Bpl.Type>() != null);
-        if (mapTypeCtor is Bpl.TypeSynonymDecl mapSynonym && imapTypeCtor is Bpl.TypeSynonymDecl imapSynonym) {
-          return new Bpl.TypeSynonymAnnotation(Token.NoToken, finite ? mapSynonym : imapSynonym, new List<Bpl.Type> { });
-        } else if (mapTypeCtor is Bpl.TypeCtorDecl mapCtor && imapTypeCtor is Bpl.TypeCtorDecl imapCtor) {
-          return new Bpl.CtorType(Token.NoToken, finite ? mapCtor : imapCtor, new List<Bpl.Type> { });
+        if (finite) {
+          if (mapTypeCtor is Bpl.TypeSynonymDecl tSynonym) {
+            return new Bpl.TypeSynonymAnnotation(Token.NoToken, tSynonym, new List<Bpl.Type> { });
+          } else if (mapTypeCtor is Bpl.TypeCtorDecl tCtor) {
+            return new Bpl.CtorType(Token.NoToken, tCtor, new List<Bpl.Type> { });
+          } else {
+            throw new NotImplementedException("Do not know how to construct MapType.");
+          }
         } else {
-          throw new NotImplementedException("Do not know how to construct MapType.");
+          if (imapTypeCtor is Bpl.TypeSynonymDecl tSynonym) {
+            return new Bpl.TypeSynonymAnnotation(Token.NoToken, tSynonym, new List<Bpl.Type> { });
+          } else if (imapTypeCtor is Bpl.TypeCtorDecl tCtor) {
+            return new Bpl.CtorType(Token.NoToken, tCtor, new List<Bpl.Type> { });
+          } else {
+            throw new NotImplementedException("Do not know how to construct IMapType.");
+          }
         }
       }
 
       public Bpl.Type SeqType(Bpl.IToken tok) {
         Contract.Requires(tok != null);
         Contract.Ensures(Contract.Result<Bpl.Type>() != null);
-        if (seqTypeCtor is Bpl.TypeSynonymDecl seqSynonym) {
-          return new Bpl.TypeSynonymAnnotation(Token.NoToken, seqSynonym, new List<Bpl.Type> { });
-        } else if (seqTypeCtor is Bpl.TypeCtorDecl seqCtor) {
-          return new Bpl.CtorType(Token.NoToken, seqCtor, new List<Bpl.Type> { });
+        if (seqTypeCtor is Bpl.TypeSynonymDecl tSynonym) {
+          return new Bpl.TypeSynonymAnnotation(Token.NoToken, tSynonym, new List<Bpl.Type> { });
+        } else if (seqTypeCtor is Bpl.TypeCtorDecl tCtor) {
+          return new Bpl.CtorType(Token.NoToken, tCtor, new List<Bpl.Type> { });
         } else {
           throw new NotImplementedException("Do not know how to construct SeqType.");
         }
