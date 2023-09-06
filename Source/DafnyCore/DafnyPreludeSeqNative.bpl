@@ -72,6 +72,9 @@ axiom (forall v: Seq, t0: Ty, h: Heap :: { $IsAlloc(v, TSeq(t0), h) }
 type {:builtin "Seq"} BuiltinSeq _;
 type Seq = BuiltinSeq Box;
 
+function {:identity} LitSeq(x: Seq): Seq { x }
+axiom (forall x: Seq :: { $Box(LitSeq(x)) } $Box(LitSeq(x)) == LitBox($Box(x)) );
+
 function {:builtin "seq.empty"} Seq_Empty(): Seq;
 function {:builtin "seq.len"} Seq_Len(a: Seq): int;
 function {:builtin "seq.++"} Seq_Concat(a: Seq, b: Seq): Seq;
