@@ -124,7 +124,7 @@ namespace Microsoft.Dafny {
           eqs = BplAnd(eqs, eq);
         }
 
-        var ax = BplForall(new List<Variable> { aVar, bVar }, trigger, BplImp(ante, Bpl.Expr.Iff(dtEqual, eqs)));
+        var ax = BplForall(new List<Variable> { aVar, bVar }, trigger, BplImp(ante, BplIff(dtEqual, eqs)));
         AddOtherDefinition(constructorFunctions[ctor], new Bpl.Axiom(dt.tok, ax, $"Datatype extensional equality definition: {ctor.FullName}"));
       }
     }
@@ -143,7 +143,7 @@ namespace Microsoft.Dafny {
         var lhs = FunctionCall(dt.tok, dtEqualName, Bpl.Type.Bool, a, b);
         var rhs = Bpl.Expr.Eq(a, b);
 
-        var ax = BplForall(new List<Variable> { aVar, bVar }, BplTrigger(lhs), Bpl.Expr.Iff(lhs, rhs));
+        var ax = BplForall(new List<Variable> { aVar, bVar }, BplTrigger(lhs), BplIff(lhs, rhs));
         sink.AddTopLevelDeclaration(new Bpl.Axiom(dt.tok, ax, $"Datatype extensionality axiom: {dt.FullName}"));
       }
     }
@@ -423,7 +423,7 @@ namespace Microsoft.Dafny {
           var queryPredicate = FunctionCall(ctor.tok, queryField.Name, Bpl.Type.Bool, th);
           var ctorId = FunctionCall(ctor.tok, BuiltinFunction.DatatypeCtorId, null, th);
           var rhs = Bpl.Expr.Eq(ctorId, constructorIdReference);
-          var body = Bpl.Expr.Iff(queryPredicate, rhs);
+          var body = BplIff(queryPredicate, rhs);
           var tr = BplTrigger(queryPredicate);
           var ax = BplForall(thVar, tr, body);
           sink.AddTopLevelDeclaration(new Bpl.Axiom(ctor.tok, ax, "Questionmark and identifier"));

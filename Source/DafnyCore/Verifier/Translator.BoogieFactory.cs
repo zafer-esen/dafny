@@ -189,15 +189,15 @@ namespace Microsoft.Dafny {
         return FunctionCall(expr.tok, BuiltinFunction.LitHandleType, null, expr);
       } else if (typ.Equals(predef.RefType)) {
         return FunctionCall(expr.tok, BuiltinFunction.LitRef, null, expr);
-      } else if (typ.Equals(predef.SeqType(typ.tok))) {
+      } else if (options.UseSeqs && typ.Equals(predef.SeqType(typ.tok))) {
         return FunctionCall(expr.tok, BuiltinFunction.LitSeq, null, expr);
-      } else if (typ.Equals(predef.MapType(typ.tok, false))) {
+      } else if (options.UseMaps && typ.Equals(predef.MapType(typ.tok, false))) {
         return FunctionCall(expr.tok, BuiltinFunction.LitIMap, null, expr);
-      } else if (typ.Equals(predef.MapType(typ.tok, true))) {
+      } else if (options.UseIMaps && typ.Equals(predef.MapType(typ.tok, true))) {
         return FunctionCall(expr.tok, BuiltinFunction.LitMap, null, expr);
-      } else if (typ.Equals(predef.SetType(typ.tok, false))) {
+      } else if (options.UseSets && typ.Equals(predef.SetType(typ.tok, false))) {
         return FunctionCall(expr.tok, BuiltinFunction.LitISet, null, expr);
-      } else if (typ.Equals(predef.SetType(typ.tok, true))) {
+      } else if (options.UseISets && typ.Equals(predef.SetType(typ.tok, true))) {
         return FunctionCall(expr.tok, BuiltinFunction.LitSet, null, expr);
       } else if (typ.Equals(predef.BoxType) || 
                   (expr.ShallowType != null && expr.ShallowType.Equals(predef.BoxType))) {

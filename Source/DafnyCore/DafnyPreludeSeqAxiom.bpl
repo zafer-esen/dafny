@@ -7,15 +7,15 @@
 // Copyright by the contributors to the Dafny Project
 // SPDX-License-Identifier: MIT
 
-function TSeq(Ty) : Ty;
-axiom (forall t: Ty :: { TSeq(t) } Inv0_TSeq(TSeq(t)) == t);
-axiom (forall t: Ty :: { TSeq(t) } Tag(TSeq(t)) == TagSeq);
+// function TSeq(Ty) : Ty;
+// axiom (forall t: Ty :: { TSeq(t) } Inv0_TSeq(TSeq(t)) == t);
+// axiom (forall t: Ty :: { TSeq(t) } Tag(TSeq(t)) == TagSeq);
 
-function Inv0_TSeq(Ty) : Ty;
+// function Inv0_TSeq(Ty) : Ty;
 
-// -- Type Tags --
+// // -- Type Tags --
 
-const unique TagSeq      : TyTag;
+// const unique TagSeq      : TyTag;
 
 // ---------------------------------------------------------------
 // -- Literals ---------------------------------------------------
@@ -125,7 +125,7 @@ axiom (forall ty: Ty, heap: Heap, len: int, init: HandleType ::
 axiom (forall ty: Ty, heap: Heap, len: int, init: HandleType, i: int ::
   { Seq#Index(Seq#Create(ty, heap, len, init), i) }
   $IsGoodHeap(heap) && 0 <= i && i < len ==>
-  Seq#Index(Seq#Create(ty, heap, len, init), i) == Apply1(TInt, ty, heap, init, $Box(i)));
+  Seq#Index(Seq#Create(ty, heap, len, init), i) == Apply1(TInt(), ty, heap, init, $Box(i)));
 #endif
 
 function Seq#Append(Seq, Seq): Seq;
